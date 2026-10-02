@@ -1,0 +1,98 @@
+/* Teaching diagrams stay static; captions and controls remain outside the scroll surface. */
+.tutorial-context .tutorial-step-label{font-size:14px;font-weight:750;color:#456578;margin:8px 0}
+.tutorial-context .tutorial-surface{max-height:min(355px,48dvh);padding:12px;overflow:auto;overscroll-behavior:contain;scroll-behavior:auto}
+.tutorial-context [data-tutorial-diagram]{min-width:0}
+.tutorial-context .tutorial-caption{display:block;line-height:1.55;font-size:16px;white-space:normal;overflow-wrap:anywhere;min-height:48px;margin:12px 0}
+.tutorial-context .tutorial-caption svg{display:inline-block;vertical-align:middle}
+.tutorial-context .tutorial-controls{display:flex;flex-wrap:wrap;gap:7px}
+.tutorial-context .tutorial-controls button{min-height:44px;font-size:14px;padding:10px;flex:1 1 auto}
+.tutorial-context .tutorial-controls button:disabled{opacity:.45}
+.tutorial-context .tutorial-controls button:focus-visible{outline:3px solid #be8c24;outline-offset:2px}
+.teaching-exact{text-align:center;min-width:0;display:flex;flex-direction:column;align-items:center;gap:8px}
+.teaching-exact>svg{display:block;width:100%;height:225px;max-height:225px;overflow:visible}
+.teaching-exact p,.teaching-exact strong,.teaching-exact small{margin:0;line-height:1.5;max-width:100%;overflow-wrap:anywhere}
+.teaching-panels{display:flex;flex-wrap:wrap;align-items:start;justify-content:center;gap:12px;min-width:0}
+.teaching-panels figure{margin:0;flex:1 1 145px;min-width:135px;max-width:100%}
+.teaching-panels figcaption,.teaching-layers figcaption{font-weight:750;font-size:15px;line-height:1.5;margin-bottom:5px}
+.teaching-panels svg{display:block;width:100%;height:190px;max-height:190px;overflow:visible}
+.teaching-panels p{font-size:14px;margin:6px 0;overflow-wrap:anywhere}
+.teaching-formula{flex-basis:100%;font-weight:750}
+.teaching-layers{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;width:100%}
+.teaching-layers figure{margin:0;flex:1 1 80px;min-width:75px;max-width:180px}
+.teaching-grid{display:grid;gap:3px;width:min(100%,260px);margin:0 auto}
+.teaching-grid>span{min-height:30px;aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border:1px solid #a9bec9;border-radius:5px;background:#eef5f7;color:#233f54;font-size:18px}
+.teaching-grid>span.active{background:#ffe2a0;border:2px solid #9b6d17}.teaching-grid>span.ray{background:#d2ebe2}.teaching-grid>span.wall{background:#658096;color:white}.teaching-grid small{font-size:11px}
+.tutorial-result{text-align:center;font-size:28px}.tutorial-result>.scene{margin-top:10px}.tutorial-result .scene-title{font-size:32px}
+@media(max-width:480px){.tutorial-context .tutorial-surface{padding:8px;max-height:min(330px,43dvh)}.teaching-panels figure{flex-basis:100%;min-width:0}.teaching-panels svg{height:175px;max-height:175px}.tutorial-context .tutorial-controls button{font-size:12px;padding:8px}.teaching-exact>svg{height:190px;max-height:190px}}
+@media(prefers-reduced-motion:reduce){.tutorial-context *{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+
+/* Small replay boards fit above the caption; final choices use one result. */
+.tutorial-context .touch-board,.tutorial-context .puzzle-grid,.tutorial-context .diagram-grid{max-width:255px;margin-inline:auto}
+.tutorial-context .code-history>div{min-height:46px}
+.tutorial-context .code-history .symbol-card{max-width:45px}
+.tutorial-context .train-input button,.tutorial-context .train-sidings button,.tutorial-context .train-output{font-size:16px}
+@media(max-width:480px){.teaching-panels figure{flex:1 1 125px;min-width:120px}.tutorial-context .touch-board,.tutorial-context .puzzle-grid,.tutorial-context .diagram-grid{max-width:225px}}
+
+.teaching-exact.teaching-drop>svg{height:160px;max-height:160px}.teaching-drop .teaching-grid>span{aspect-ratio:auto;min-height:28px;height:28px;font-size:13px}.teaching-drop .teaching-grid small{font-size:9px}.teaching-drop p{font-size:13px}
+
+/* Compare three alternatives at one scale, without a growing last row. */
+.teaching-plane-panels[data-panel-count="3"]{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;align-items:start}
+.teaching-plane-panels[data-panel-count="3"]>figure{min-width:0;width:100%;max-width:none;margin:0}
+.teaching-plane-panels[data-panel-count="3"]>figure>figcaption{min-height:4.5em;font-size:14px;line-height:1.5;margin-bottom:4px}
+.teaching-plane-panels[data-panel-count="3"]>figure>svg{height:150px;max-height:150px}
+
+/* Replay captions replace the live operation guide; choices have a separate result frame. */
+.tutorial-context .operation-guide,.tutorial-context .answer-options,.tutorial-context .extended-options{display:none}
+.tutorial-context .geometry-art,.tutorial-context .voxel-pieces{height:225px;max-height:225px;max-width:100%}
+
+.tutorial-context .edge-board{height:225px;max-height:225px;max-width:100%}
+.tutorial-context .scene-circuit{gap:6px}
+.tutorial-context .scene-circuit p{margin:0;font-size:14px;line-height:1.4}
+
+/* Both quantities remain together; intrinsic SVG width must not expand a grid track. */
+.tutorial-context .compare-problem{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.tutorial-context .compare-problem>div{min-width:0;padding:8px;gap:6px}
+.tutorial-context .compare-problem .dot-art{width:100%;min-width:0;max-width:100%;height:150px}
+
+/* Current compare scenes use two nested row panels, not the legacy dot-art path. */
+.tutorial-context[data-game="compare"] .scene-row-panels{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;align-items:start}
+.tutorial-context[data-game="compare"] .scene-row-panels>.scene{width:100%;min-width:0;max-width:none;gap:6px}
+.tutorial-context[data-game="compare"] .scene-row-panels .diagram-grid{width:100%;max-width:125px;min-width:0}
+.tutorial-context[data-game="compare"] .scene-row-panels .scene-title{font-size:15px;line-height:1.4}
+/* Keep the camera layout and photo together, with one uniform photo scale. */
+.tutorial-context .scene-viewpoint{gap:6px}
+.tutorial-context .scene-viewpoint .diagram-grid{width:175px;max-width:175px}
+.tutorial-context .scene-viewpoint .camera-board{grid-template-columns:30px minmax(0,1fr) 30px;grid-template-rows:20px auto 20px;width:235px;max-width:100%}
+.tutorial-context .scene-viewpoint .camera{font-size:13px;white-space:nowrap}
+.tutorial-context .scene-viewpoint .photo-towers{zoom:.8;gap:8px;padding:10px 10px 0}
+
+/* Sequence examples wrap in reading order inside the dialog, never widen it. */
+.tutorial-context{min-width:0;max-width:100%}
+.tutorial-context[data-game="pattern"] .scene-sequence-wrap{min-width:0;width:100%;max-width:100%}
+.tutorial-context[data-game="pattern"] .scene-row-sequence{width:100%;max-width:100%;min-width:0;flex-wrap:wrap;justify-content:center;overflow:visible;gap:6px}
+.tutorial-context[data-game="pattern"] .pattern-sequence{min-width:0;max-width:100%;flex-wrap:wrap;gap:6px}
+
+/* Every pattern item is visible in order; no horizontal exploration remains. */
+.tutorial-context[data-game="pattern"] .scene-sequence-wrap>.scene-sub{display:none}
+
+/* Four teaching layers stay together; their values and ray keep the same order. */
+.teaching-skewer[data-layers="4"]{gap:4px}
+.teaching-skewer[data-layers="4"]>p{font-size:13px;line-height:18px}
+.teaching-skewer[data-layers="4"]>strong{font-size:14px;line-height:18px}
+.teaching-skewer[data-layers="4"] .teaching-layers{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.teaching-skewer[data-layers="4"] .teaching-layers figure{width:100%;min-width:0;max-width:none}
+.teaching-skewer[data-layers="4"] .teaching-layers figcaption{font-size:14px;line-height:18px;margin-bottom:2px}
+.teaching-skewer[data-layers="4"] .teaching-grid{gap:2px}
+.teaching-skewer[data-layers="4"] .teaching-grid>span{aspect-ratio:auto;min-height:18px;height:18px;font-size:14px;line-height:1;flex-direction:row;gap:1px;border-radius:3px}
+.teaching-skewer[data-layers="4"] .teaching-grid small{font-size:10px;line-height:1}
+
+/* Advanced teaching examples retain every ball, key mapping and message symbol. */
+.tutorial-context[data-game="ballweigh"] .ball-rack>button{height:55px;font-size:23px}
+.tutorial-context[data-game="cipher"] .scene-cipher{gap:4px}
+.tutorial-context[data-game="cipher"] .cipher-key{padding:4px;gap:3px}
+.tutorial-context[data-game="cipher"] .cipher-key>span{padding:2px 4px;font-size:16px;line-height:1.3}
+.tutorial-context[data-game="cipher"] .cipher-message{font-size:20px;padding:4px;gap:6px}
+.tutorial-context[data-game="cipher"] .cipher-message>b{padding:2px}
+
+/* A short viewport keeps the same 22 ball labels within five rows. */
+@media(max-height:760px){.tutorial-context[data-game="ballweigh"] .ball-rack>button{height:50px;font-size:23px}.tutorial-context[data-game="cipher"] .scene-cipher{gap:2px}.tutorial-context[data-game="cipher"] .cipher-key{padding:2px}.tutorial-context[data-game="cipher"] .cipher-key>span{padding:1px 4px}}

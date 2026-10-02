@@ -18,7 +18,7 @@ function symbolAlternatives(answer:any,attrs:string[],shuffle:<T>(a:T[])=>T[]){
 const annotated=(p:Puzzle,features:Features,score:number,concept:string):Puzzle=>{
  const text:Record<string,[string,string]>={order:['すべての やくそくどおりに ならべよう','位置・前後・間の枚数など、表示された全ての約束を満たす順番にカードを並べます。'],matrix:['よこの きまりで くうらんを みつけよう','例の行と同じ計算の関係を使い、空欄の数を求めます。'],odd:['きまりに あわない 1まいは？','表示された条件を満たさないカードを一枚選びます。'],zebra:['すべての じょうけんで カードを くばろう','一人に一枚、同じ数字は一度だけです。表示された候補と、二人の数字の関係を両方満たします。']};
  let scene=p.data.scene,prompt=text[p.id]?.[0],help=text[p.id]?.[1];
- if(p.id==='familytree'){prompt=scene.queryText;help='矢印は親から子へのつながりです。問題の人物や関係を確かめ、線をたどって考えます。';scene={...scene,hideQuery:true};}
+ if(p.id==='familytree'){prompt=scene.queryText;help='線は親子のつながりで、上の人が親です。問題の人物や関係を確かめ、線をたどって考えます。';scene={...scene,hideQuery:true};}
  if(p.id==='rulemachine'||p.id==='cipher'){prompt=scene.prompt;help=p.id==='rulemachine'?'例から箱の変化を読み取ります。逆向きの問題は変化を戻し、二つの箱は指定の順番で使います。':'表の矢印を指定の向きと順番でたどります。逆向きなら最後の表から元へ戻します。';scene={...scene,prompt:undefined};}
  return{...p,data:{...p.data,scene,...(prompt?{prompt}:{}),...(help?{help}:{}),logicCurriculum:true,curriculumMetrics:{...features,score,concept}}};
 };
@@ -172,7 +172,7 @@ export function generateLogicCurriculum(id:string,level:number,seed:number,fallb
   const n=band===0?3:6,map=shuffle(range(n)),map2=band>=2?shuffle(range(n)):null,map3=band>=4?shuffle(range(n)):null,maps=[map,...(map2?[map2]:[]),...(map3?[map3]:[])],reverse=band===1||band===3||band===4&&step>=2,message=shuffle(range(n)).slice(0,Math.min(n,band===0?1+Math.min(2,step):2+Math.min(2,step))),decode=(v:number)=>reverse?[...maps].reverse().reduce((v,m)=>m.indexOf(v),v):maps.reduce((v,m)=>m[v],v),correctInitial=message.map(i=>decode(i)+1).join(' '),wrong=range(12).map(()=>message.map(i=>int(1,n)).join(' '));
   if(band>=4&&correctInitial===message.map(i=>i+1).join(' ')){const last=maps[maps.length-1],a=reverse?last.indexOf(message[0]):maps.slice(0,-1).reduce((v,m)=>m[v],message[0]),b=(a+1)%n;[last[a],last[b]]=[last[b],last[a]];}const correct=message.map(i=>decode(i)+1).join(' ');
   const prompt=reverse?'さいごの すうじから、もとの すうじへ もどそう':maps.length===1?'カギで よみかえよう':`カギを 1 → ${range(maps.length-1).map(i=>i+2).join(' → ')} の じゅんに`;
-  return annotated(choice(correct,wrong,{type:'cipher',map,map2,maps,message,prompt,reverse},reverse?'さいごの カギから、やじるしを ぎゃくに たどろう。':'ひとつめの こたえを、つぎの カギに いれよう。',{map,map2,map3,maps,message,reverse}),{layers:maps.length,distinctSymbols:message.length,lookupSteps:maps.length*message.length,reverse},maps.length*message.length+(reverse?maps.length:0),'symbol-composition');
+  return annotated(choice(correct,wrong,{type:'cipher',map,map2,maps,message,prompt,reverse},reverse?'さいごの カギから、やじるしを ぎゃくに たどろう。':maps.length===1?'ひとつの カギの やじるしに そって よみかえよう。':'ひとつめの こたえを、つぎの カギに いれよう。',{map,map2,map3,maps,message,reverse}),{layers:maps.length,distinctSymbols:message.length,lookupSteps:maps.length*message.length,reverse},maps.length*message.length+(reverse?maps.length:0),'symbol-composition');
  }
  if(id==='mintree'){
   const n=L<=4?4:L<=8?5:L<=14?6:7,nodes=range(n).map(i=>[Math.cos(-Math.PI/2+i*2*Math.PI/n)*2+2,Math.sin(-Math.PI/2+i*2*Math.PI/n)*2+2]),edges=range(n).map(i=>[i,(i+1)%n]);const candidates=shuffle(range(n).flatMap(a=>range(n).filter(b=>b>a+1&&!(a===0&&b===n-1)).map(b=>[a,b]))),extra=Math.min(n-3,1+band+(step>=2?1:0));

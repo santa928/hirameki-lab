@@ -14,7 +14,7 @@ export const SPACE_META:Meta[]=[
 ['tunnelpass','トンネル つみき','space','ふたつの あなを とおれる むきは？','前と右にある二つの穴を、向きを変えずに通れる積み木を選びます。穴の余白には触れなくても大丈夫です。'],
 ['hinge3d','ぱたんと りったい','space','まげると どの かたち？','しるしの関節より先を、指定された軸のまわりに90度回します。線の色と順番を追いましょう。'],
 ['handedness','みぎてと ひだりて','space','かがみうつしは どれ？','色と番号のついた3本の枝を見ます。回すだけでは重ならない、鏡写しの一つを選びます。'],
-['gears','はぐるま リレー','space','さいごは どっちに まわる？','かみ合う歯車は反対向き。ベルトでつながる車は同じ向きです。最初の回転を最後まで伝えます。'],
+['gears','はぐるま リレー','space','さいごは どっちに まわる？','かみ合う歯車とクロスしたベルトは反対向き、まっすぐのベルトは同じ向きです。問題の指示に合わせて、最初・最後の回転や途中のつなぎ方を調べます。'],
 ['gravitytray','ころころ トレイ','space','かたむけると どこに とまる？','矢印の順にトレイを傾けます。玉は壁や先の玉にぶつかるまで転がります。最後の玉の位置を選びます。'],
 ['viewpoint','どこから パシャリ','space','この しゃしんは どこから？','上から見た塔の配置と写真を比べます。同じ並びが見えるカメラを選びます。'],
 ['skewer','くしの とおりみち','space','くしは どの じゅんに とおる？','矢印の向きに、指定の列をまっすぐ貫きます。通るしるしを順に選びます。白い穴は飛ばします。'],
@@ -31,7 +31,19 @@ export function cubeRotations(cells:number[][]){const out:number[][][]=[];for(le
 export function cubeSignature(cells:number[][]){return cubeRotations(cells).map(key).sort()[0];}
 export function polycube(c:ReturnType<typeof context>,count:number){const cells=[[0,0,0]];while(cells.length<count){const a=c.pick(cells),axis=c.int(0,2),b=[...a];b[axis]+=c.pick([-1,1]);if(!cells.some(v=>equal(v,b)))cells.push(b);}return normalize(cells);}
 const projections=(cells:number[][])=>[normalize([...new Map(cells.map(([x,,z])=>[key([x,z]),[x,z]])).values()]),normalize([...new Map(cells.map(([,y,z])=>[key([y,z]),[y,z]])).values()]),normalize([...new Map(cells.map(([x,y])=>[key([x,y]),[x,y]])).values()])];
-export function tilt(balls:number[],n:number,walls:number[],dir:number){const delta=[-n,1,n,-1][dir],a=[...balls].sort((a,b)=>dir===0?a-b:dir===2?b-a:dir===1?b%n-a%n:a%n-b%n),settled:number[]=[];for(let at of a){for(let k=0;k<n;k++){const next=at+delta;if(next<0||next>=n*n||[1,3].includes(dir)&&Math.floor(next/n)!==Math.floor(at/n)||walls.includes(next)||settled.includes(next))break;at=next;}settled.push(at);}return settled.sort((a,b)=>a-b);}
+export type TiltStop={from:number;to:number;path:number[];reason:'edge'|'wall'|'ball';blocker:number;settled:number[]};
+export function tiltTrace(balls:number[],n:number,walls:number[],dir:number){
+ const delta=[-n,1,n,-1][dir],order=[...balls].sort((a,b)=>dir===0?a-b:dir===2?b-a:dir===1?b%n-a%n:a%n-b%n),settled:number[]=[],steps:TiltStop[]=[];
+ for(const from of order){let at=from;const path=[at];for(let k=0;k<n;k++){const next=at+delta;if(next<0||next>=n*n||[1,3].includes(dir)&&Math.floor(next/n)!==Math.floor(at/n)||walls.includes(next)||settled.includes(next))break;at=next;path.push(at);}const blocker=at+delta,edge=blocker<0||blocker>=n*n||[1,3].includes(dir)&&Math.floor(blocker/n)!==Math.floor(at/n),reason=edge?'edge':walls.includes(blocker)?'wall':'ball';settled.push(at);steps.push({from,to:at,path,reason,blocker,settled:[...settled]});}
+ return{order,steps,balls:[...settled].sort((a,b)=>a-b)};
+}
+export function tilt(balls:number[],n:number,walls:number[],dir:number){return tiltTrace(balls,n,walls,dir).balls;}
+export function applyHingeTurn(points:number[][],turn:{pivot:number;axis:number;q:number}){return[...points.slice(0,turn.pivot+1).map(p=>[...p]),...rotateAxis(points.slice(turn.pivot+1),turn.axis,turn.q,points[turn.pivot])];}
+export function dropPlacement(n:number,heights:number[],piece:number[][]){
+ const footprint=[...new Set(piece.map(([x,y])=>y*n+x))],offset=Math.max(...footprint.map(i=>heights[i])),result=[...heights],placed=piece.map(([x,y,z])=>[x,y,z+offset]);
+ placed.forEach(([x,y,z])=>result[y*n+x]=Math.max(result[y*n+x],z+1));
+ return{footprint,offset,result,placed,supports:footprint.filter(i=>heights[i]===offset),gaps:footprint.filter(i=>heights[i]<offset).map(at=>({at,from:heights[at],to:offset}))};
+}
 function generateSpaceLegacy(id:string,level:number,seed:number):Puzzle|undefined{
  if(!SPACE_META.some(m=>m[0]===id))return;const c=context(id,level,seed),{L,int,pick,shuffle,base,choice,numeric,pile}=c;
  if(id==='rollcube'){const faces=shuffle(range(6).map(i=>i+1)),moves=range(1+Math.floor(L/2)).map(()=>int(0,3)),end=moves.reduce(roll,faces);return choice(end[0],shuffle(faces.filter(v=>v!==end[0])),{type:'rollcube',faces,moves},'ひとつ ころがすと、よこの めんが うえに くるよ。',{faces,moves,end});}
@@ -55,7 +67,7 @@ function generateSpaceLegacy(id:string,level:number,seed:number):Puzzle|undefine
  }
  if(id==='drop3d'){
   const n=L<8?2:3,heights=range(n*n).map(()=>int(0,1+Math.floor(L/5))),foot=[int(0,n*n-1)];while(foot.length<Math.min(n*n,2+Math.floor(L/5))){const next=pick(range(n*n).filter(i=>!foot.includes(i)&&foot.some(j=>Math.abs(i%n-j%n)+Math.abs(Math.floor(i/n)-Math.floor(j/n))===1)));foot.push(next);}
-  const unique=foot.map(i=>[i%n,Math.floor(i/n)]),piece=unique.flatMap(([x,y])=>range(int(1,2+Math.floor(L/10))).map(z=>[x,y,z])),offset=Math.max(...foot.map(i=>heights[i])),result=[...heights];piece.forEach(([x,y,z])=>result[y*n+x]=Math.max(result[y*n+x],offset+z+1));
+  const unique=foot.map(i=>[i%n,Math.floor(i/n)]),piece=unique.flatMap(([x,y])=>range(int(1,2+Math.floor(L/10))).map(z=>[x,y,z])),{offset,result}=dropPlacement(n,heights,piece);
   const wrong:any[]=[];for(let t=0;wrong.length<3&&t<100;t++){const a=[...result];for(const at of shuffle(foot).slice(0,int(1,foot.length)))a[at]=Math.max(heights[at]+1,a[at]+pick([-2,-1,1,2]));if(!equal(a,result)&&!wrong.some(o=>equal(o.values,a)))wrong.push({type:'heightmap',n,values:a});}
   return choice({type:'heightmap',n,values:result},wrong,{type:'drop3d',n,heights,piece},'いちばん さきに ぶつかる はしらが、ピースを ささえるよ。',{n,heights,piece,offset,result});
  }
@@ -76,7 +88,7 @@ function generateSpaceLegacy(id:string,level:number,seed:number):Puzzle|undefine
  if(id==='hinge3d'){
   const count=3+Math.floor(L/7);let points=[[0,0,0]];for(let i=0;i<count;i++)points.push(vec(points[i],i%2?[0,2,0]:[2,0,0]));
   if(L>=3&&L<=4)points=rotateAxis(points,2,int(0,3));
-  const apply=(a:number[][],t:any)=>[...a.slice(0,t.pivot+1),...rotateAxis(a.slice(t.pivot+1),t.axis,t.q,a[t.pivot])];
+  const apply=applyHingeTurn;
   const valid=(a:number[][])=>new Set(a.map(key)).size===a.length&&a.every((v,i)=>i===0||a.every((w,j)=>j===0||Math.abs(i-j)<=1||!range(3).every(k=>Math.max(a[i-1][k],v[k])>=Math.min(a[j-1][k],w[k])&&Math.max(a[j-1][k],w[k])>=Math.min(a[i-1][k],v[k]))));
   let answer=points.map(p=>[...p]);const turns:any[]=[];
   for(let step=0;step<1+Math.floor(L/8);step++){const options=shuffle(range((count-1)*6).map(i=>({pivot:1+Math.floor(i/6),axis:Math.floor(i%6/2),q:i%2?3:1}))).filter(t=>{const a=apply(answer,t);return !equal(a,answer)&&valid(a);});const t=pick(options);turns.push(t);answer=apply(answer,t);}
@@ -155,14 +167,14 @@ export function generateSpace(id:string,level:number,seed:number):Puzzle|undefin
   return stageInstruction(p,'あかい つみきは なんめん くっつく？',phase<1?'めんで さわる つみきを かぞえる':phase<3?'かどと めんを わける':'うえと したの めんも たしかめる');
  }
  if(id==='depthorder'){
-  const n=phase<1?3:phase<3?4:5,perm=shuffle(range(n)),positions=shuffle(range(n).map(i=>[i,perm[i]])),dir=int(0,3),depth=(direction:number)=>positions.map(([x,y])=>[y,n-1-x,n-1-y,x][direction]);let observed=dir,rank=phase===1?int(1,2):1,prompt='やじるしから いちばん てまえは？',answer:any,wrong:any[],steps=1;
+  const n=phase<1?3:phase<3?4:5,perm=shuffle(range(n)),positions=shuffle(range(n).map(i=>[i,perm[i]])),dir=int(0,3),depth=(direction:number)=>positions.map(([x,y])=>[y,n-1-x,n-1-y,x][direction]);let observed=dir,rank=phase===1?int(1,2):1,prompt='やじるしから いちばん てまえは？',answer:any,wrong:any[],steps=1,sideRank:number|undefined;
   if(phase===1)prompt=`やじるしから ${rank}ばんめに てまえは？`;
   if(phase===2){const clockwise=pick([-1,1]);observed=(dir+clockwise+4)%4;steps=2;prompt=`みる ばしょを ${clockwise===1?'とけいまわり':'はんとけいまわり'}に 90°うごかすと、いちばん てまえは？`;}
   const distances=depth(observed),order=range(n).sort((a,b)=>distances[a]-distances[b]);
   if(phase===3){const targetRank=int(0,n-3),target=order[targetRank];rank=targetRank+2;steps=2;prompt=`${String.fromCharCode(65+target)}より おくで、いちばん てまえは？`;}
-  if(phase===4){const side=depth((dir+1)%4),sideOrder=range(n).sort((a,b)=>side[a]-side[b]),sideRank=int(1,n),at=sideOrder[sideRank-1];answer=order.indexOf(at)+1;wrong=range(n).map(i=>i+1).filter(v=>v!==answer);steps=3;prompt=`やじるしから みて ひだりから ${sideRank}ばんめは、てまえから なんばんめ？`;}
+  if(phase===4){const side=depth((dir+1)%4),sideOrder=range(n).sort((a,b)=>side[a]-side[b]),pickedSideRank=int(1,n),at=sideOrder[pickedSideRank-1];sideRank=pickedSideRank;answer=order.indexOf(at)+1;wrong=range(n).map(i=>i+1).filter(v=>v!==answer);steps=3;prompt=`やじるしから みて ひだりから ${sideRank}ばんめは、てまえから なんばんめ？`;}
   else{answer=String.fromCharCode(65+order[rank-1]);wrong=range(n).map(i=>String.fromCharCode(65+i)).filter(v=>v!==answer);}
-  return stageInstruction(choice(answer,wrong,{type:'row',items:[{type:'text',text:prompt},{type:'spatialmap',n,positions,dir}]},'みる むきを きめてから、じゅんばんを たどろう。',{positions,dir,observedDirection:observed,rank,reasoningSteps:steps}),prompt,phase<1?'みる むきから ちかさを くらべる':phase<3?'むきと じゅんばんを あわせる':'よこと おくの じゅんを つなぐ');
+  return stageInstruction(choice(answer,wrong,{type:'row',items:[{type:'text',text:prompt},{type:'spatialmap',n,positions,dir}]},'みる むきを きめてから、じゅんばんを たどろう。',{positions,dir,observedDirection:observed,rank,reasoningSteps:steps,...(sideRank===undefined?{}:{sideRank})}),prompt,phase<1?'みる むきから ちかさを くらべる':phase<3?'むきと じゅんばんを あわせる':'よこと おくの じゅんを つなぐ');
  }
  if(id==='voxelcoords'){
   const p=generateSpaceLegacy(id,L,seed)!,d=p.data,n=d.scene.n,h=d.scene.h,target=d.target,start=target.map((v:number)=>v+1),moves:any[]=[];let result=[...target];
@@ -191,7 +203,7 @@ export function generateSpace(id:string,level:number,seed:number):Puzzle|undefin
   }throw Error('two essential tunnel views');
  }
  if(id==='hinge3d'){
-  const p=accept(p=>{const d=p.data;let a=d.points;for(const t of d.turns)a=[...a.slice(0,t.pivot+1),...rotateAxis(a.slice(t.pivot+1),t.axis,t.q,a[t.pivot])];return!equal(a,d.points)&&(phase<1||Math.max(...a.map((v:number[])=>v[2]))!==Math.min(...a.map((v:number[])=>v[2])))&&(phase<2||uniqueCount(d.turns.map((v:any)=>v.axis))>=Math.min(2,d.turns.length))&&(phase<3||uniqueCount(d.turns.map((v:any)=>v.pivot))>=Math.min(2,d.turns.length));});
+  const p=accept(p=>{const d=p.data;let a=d.points;for(const t of d.turns)a=applyHingeTurn(a,t);return!equal(a,d.points)&&(phase<1||Math.max(...a.map((v:number[])=>v[2]))!==Math.min(...a.map((v:number[])=>v[2])))&&(phase<2||uniqueCount(d.turns.map((v:any)=>v.axis))>=Math.min(2,d.turns.length))&&(phase<3||uniqueCount(d.turns.map((v:any)=>v.pivot))>=Math.min(2,d.turns.length));});
   return stageInstruction(p,'まげると どの かたち？',phase<1?'かんせつより さきだけを まわす':phase<3?'ちがう じくへ おりまげる':'うごく ぶぶんを つぎの おりめへ つなぐ');
  }
  if(id==='handedness'){
