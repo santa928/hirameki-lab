@@ -51,7 +51,7 @@ test('parking shows an unselected same-unit radius sample without extra candidat
 });
 test('prose and graphic sequences have distinct layouts without changing order',()=>{
  const liar=render(generateStage('liar',50,0));assert.ok(liar.includes('scene-row-prose'));assert.ok(liar.includes('ほんとうの はなしは'));
- const pattern=render(generateStage('pattern',25,0));assert.ok(pattern.includes('scene-row-sequence'));
+ const pattern=render(generateStage('pattern',25,0));assert.ok(pattern.includes('scene-row-sequence'));assert.ok(pattern.includes('よこに うごかして つづきを みよう'));
  const compare=render(generateStage('compare',52,0));assert.ok(compare.includes('scene-row-panels'));assert.ok(compare.includes('ひだり'));assert.ok(compare.includes('みぎ'));assert.ok(compare.includes('7このまとまり'));
  const mixed=scene({type:'row',items:[{type:'text',text:'条件'}, {type:'balls',a:3,b:11}]});assert.ok(mixed.includes('scene-row-mixed'));assert.equal((mixed.match(/class="symbol-card"/g)||[]).length,11);
  const groups=scene({type:'row',layout:'groups',items:[{type:'text',text:'ばら'},{type:'grid',n:2,values:['●','']}]});assert.ok(groups.includes('scene-row-groups'));

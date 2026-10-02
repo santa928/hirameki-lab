@@ -81,3 +81,5 @@
 .sequence-item>.scene{max-width:none;width:100%}
 .sequence-item .symbol-card{max-width:none}
 @media(max-width:649px){.extended-puzzle .scene-row-panels{grid-template-columns:1fr;gap:20px}.scene-row-prose .scene-title,.scene-row-mixed>.scene-text .scene-title{font-size:18px}}
+
+.scene-sequence-wrap{width:100%;min-width:0;max-width:620px}.scene-sequence-wrap>.scene-row-sequence{max-width:100%}

@@ -33,7 +33,7 @@ export function SceneView({s,compact=false,questionText}:{s:Scene|number|string|
 if(s.type==='text'&&questionText&&s.text===questionText&&!s.sub)return null;
 const wrap=(node:React.ReactNode)=> <div className={`scene scene-${s.type} ${s.type==='row'?`scene-row-${sceneRowLayout(s)}`:''} ${s.layout?`scene-layout-${s.layout}`:''} ${compact?'compact':''}`}>{node}</div>;
 if(s.type==='text')return wrap(<><strong className="scene-title">{s.text}</strong>{s.sub&&<small>{s.sub}</small>}</>);
-if(s.type==='row')return wrap(s.items.map((item:Scene,i:number)=>sceneRowLayout(s)==='sequence'?<div className="sequence-item" style={{width:Math.max(84,(item.count||1)*36)}} key={i}><SceneView s={item} compact={compact}/></div>:<SceneView key={i} s={item} compact={compact} questionText={questionText}/>));
+if(s.type==='row'){const layout=sceneRowLayout(s),content=wrap(s.items.map((item:Scene,i:number)=>layout==='sequence'?<div className="sequence-item" style={{width:Math.max(84,(item.count||1)*36)}} key={i}><SceneView s={item} compact={compact}/></div>:<SceneView key={i} s={item} compact={compact} questionText={questionText}/>));return layout==='sequence'&&s.items.length>4?<div className="scene-sequence-wrap">{content}<p className="scene-sub">よこに うごかして つづきを みよう →</p></div>:content;}
 if(s.type==='shape')return wrap(<Shape cells={s.cells} extent={s.extent} grid={s.grid}/>);
 if(s.type==='cubes')return wrap(<><Cubes cells={s.cells}/>{s.showLayers&&<CubeLayers cells={s.cells}/>}</>);
 if(s.type==='symbol')return wrap(<SymbolCard s={s}/>);
