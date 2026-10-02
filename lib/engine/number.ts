@@ -175,6 +175,7 @@ export function generateNumber(id:string,level:number,seed:number):Puzzle|undefi
  }
  if(id==='probability'){
   const b=int(4,Math.min(12,6+tier+q)),a=int(2,b-2);let numerator=a,denominator=b,scene:Scene={type:'balls',a,b},event='triangle',draws=1,replacement=false;
+  if(tier===0)scene=sceneRow([scene,sceneText('△が出る割合は？')]);
   if(tier===1){numerator=b-a;event='circle';scene=sceneRow([scene,sceneText('まるが出る割合は？')]);}
   if(tier===2){const square=int(1,b-a-1),circle=b-a-square;event='triangle-or-square';numerator=a+square;scene=sceneRow([sceneText(`△ ${a}枚、□ ${square}枚、○ ${circle}枚`),sceneText('△か□が出る割合は？')]);}
   if(tier===3){const removed=q%2?'triangle':'circle';numerator=removed==='triangle'?a-1:a;denominator=b-1;event=`after-${removed}`;scene=sceneRow([scene,sceneText(`${removed==='triangle'?'△':'○'}を1枚取りのぞいた後、△が出る割合は？`)]);}
