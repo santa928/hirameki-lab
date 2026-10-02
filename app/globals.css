@@ -83,3 +83,5 @@
 @media(max-width:649px){.extended-puzzle .scene-row-panels{grid-template-columns:1fr;gap:20px}.scene-row-prose .scene-title,.scene-row-mixed>.scene-text .scene-title{font-size:18px}}
 
 .scene-sequence-wrap{width:100%;min-width:0;max-width:620px}.scene-sequence-wrap>.scene-row-sequence{max-width:100%}
+
+.operation-guide{width:100%;max-width:620px;text-align:left;border:1px solid #d7e5e7;border-radius:14px;background:#f4faf9;padding:14px;margin:0 auto 16px;font-size:15px;line-height:1.6;overflow-wrap:anywhere}.operation-guide-title{margin:0 0 6px;font-size:16px;color:#315968}.operation-guide-steps{padding-left:22px;margin:0 0 8px}.operation-guide-steps li+li{margin-top:4px}.operation-guide-goal{font-weight:700;margin:8px 0 0}.operation-guide-goal-grid{border-collapse:separate;border-spacing:4px;margin:10px auto 0;width:min(100%,220px);table-layout:fixed}.operation-guide-goal-grid td{height:38px;text-align:center;border:1px solid #c8dbdd;border-radius:6px;background:#fff;font-size:17px}.operation-guide-goal-grid caption{font-size:13px;margin-bottom:4px}@media(max-width:480px){.operation-guide{font-size:14px;padding:12px}.operation-guide-goal-grid td{height:32px}}
