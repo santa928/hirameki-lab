@@ -1,0 +1,11 @@
+import assert from 'node:assert/strict';
+import {test} from 'node:test';
+import {project,projectRequire,loadSource} from './helpers/tsx-source.mjs';
+import {IDS,generate} from '../lib/puzzles.ts';
+import {makeTutorial} from '../lib/tutorial.ts';
+import {replayTrial} from '../lib/engine/trial.ts';
+const React=projectRequire('react'),{renderToStaticMarkup}=projectRequire('react-dom/server');
+const {PuzzleView}=loadSource(`${project}/components/puzzle-view.tsx`),{TrialBoard}=loadSource(`${project}/components/trial-board.tsx`);
+test('all learning themes and solved tutorials render with supported geometry',()=>{for(const id of IDS){for(const level of [1,5,9,13,17,20])for(const seed of [0,73021]){const p=generate(id,level,seed),html=renderToStaticMarkup(React.createElement(PuzzleView,{p,onAnswer:()=>{}}));assert.ok(!html.replaceAll(' ','').includes('ずをよみこんでいます'),`${id}/${level}: unsupported scene`);assert.ok(!/="[^"]*NaN/.test(html),`${id}/${level}: invalid geometry`);}const {p,frames}=makeTutorial(id);assert.doesNotThrow(()=>renderToStaticMarkup(React.createElement(PuzzleView,{p,locked:true,playbackAnswer:frames.at(-1).answer})),id);}});
+test('robot example shows the executed commands and original choices highlight the answer',()=>{const {p,frames}=makeTutorial('programbot'),actions=frames.at(-1).answer,html=renderToStaticMarkup(React.createElement(TrialBoard,{p,state:replayTrial(p,actions),actions,playback:true,onMove:()=>{},onProgram:()=>{}}));assert.equal(html.includes('ここに めいれいを ならべよう'),false);assert.ok(html.includes(`${actions.length} / ${p.data.budget}`));const t=makeTutorial('cubes');const choice=renderToStaticMarkup(React.createElement(PuzzleView,{p:t.p,locked:true,playbackAnswer:t.frames.at(-1).answer}));assert.ok(choice.includes('demo-focus'));});
+test('robot goal direction remains explicit even when the robot covers the star',()=>{for(let direction=0;direction<4;direction++){const p=generate('programbot',1,0);p.data.target.dir=direction;const html=renderToStaticMarkup(React.createElement(TrialBoard,{p,state:{...p.data.initial,pos:p.data.target.pos},actions:[],onMove:()=>{},onProgram:()=>{}}));assert.ok(html.includes(`class="program-goal">☆で <strong>${['↑','→','↓','←'][direction]}</strong>`));assert.ok(html.includes('を むいて とまろう'));}});

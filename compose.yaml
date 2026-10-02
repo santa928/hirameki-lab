@@ -1,0 +1,19 @@
+name: hirameki-lab
+services:
+  web:
+    image: node:24-bookworm
+    network_mode: bridge
+    working_dir: /app
+    volumes:
+      - .:/app
+    ports:
+      - "127.0.0.1:5173:5173"
+    command: ["sh", "-c", "corepack pnpm dev --port 5173"]
+  tools:
+    image: node:24-bookworm
+    network_mode: bridge
+    working_dir: /app
+    volumes:
+      - .:/app
+    profiles: ["tools"]
+    entrypoint: ["corepack", "pnpm"]

@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict';import{test}from'node:test';import{generate,check}from'../lib/puzzles.ts';
+const samples=(id,L=20,n=60)=>Array.from({length:n},(_,seed)=>generate(id,L,seed));
+const answer=p=>p.options[p.solution];
+test('area and introductory slice answers vary within each difficulty',()=>{for(const id of ['area','slice'])for(const L of[1,4,10,20])assert.ok(new Set(samples(id,L).map(p=>p.solution)).size>=2,`${id}/${L}`);});
+test('circle center is not a fixed board coordinate',()=>{assert.ok(new Set(samples('circlecenter').map(p=>JSON.stringify(p.data.scene.candidates[answer(p).charCodeAt(0)-65]))).size>10);});
+test('angles distractors use plausible angle units',()=>{for(let L=1;L<=20;L++)for(const p of samples('angles',L)){const unit=L<=4?[15,10,5,5][L-1]:L<=12?10:5;assert.ok(p.options.every(v=>v%unit===0));};});
+test('rounding option rank alone cannot identify answers',()=>{const ranks=new Set(samples('rounding').map(p=>[...p.options].sort((a,b)=>a-b).indexOf(answer(p))));assert.ok(ranks.size>=2);});
+test('placevalue requires looking beyond the ones column',()=>{for(const p of samples('placevalue'))assert.ok(p.options.filter(v=>v%10===answer(p)%10).length>=2);});
+test('route counting varies from the first level',()=>{for(const L of[1,4,7])assert.ok(new Set(samples('routecount',L).map(p=>JSON.stringify(p.data.scene))).size>10);});
+test('median alternatives are numbers actually on the cards',()=>{for(const p of samples('median'))assert.ok(p.options.every(v=>p.data.values.includes(v)));});
+test('divisibility does not reveal a guaranteed first card',()=>{assert.ok(samples('divisibility').some(p=>p.data.values[0]%p.data.divisor!==0));});
+test('extraction order is not descending card numbers',()=>{const solved=samples('extract3d').filter(p=>check(p,p.data.pieces.map((_,i)=>i).reverse())).length;assert.ok(solved<40,`${solved}/60`);});
+test('schedule clues do not print the sorted answer',()=>{const solved=samples('schedule',1).filter(p=>check(p,[...new Set(p.data.clues.flat())])).length;assert.ok(solved<45,`${solved}/60`);});
+function majority(p){const opts=p.options.map(v=>typeof v==='string'?v.split(' '):[v.shape,v.color,v.count]);const candidate=opts[0].map((_,j)=>{const counts=new Map();opts.forEach(a=>counts.set(a[j],(counts.get(a[j])||0)+1));return [...counts].sort((a,b)=>b[1]-a[1])[0][0];});return opts.findIndex(v=>JSON.stringify(v)===JSON.stringify(candidate));}
+test('choice attribute majority does not reveal visual answers',()=>{for(const id of['pattern','rulemachine','cipher','skewer']){const wins=samples(id).filter(p=>majority(p)===p.solution).length;assert.ok(wins<45,`${id} ${wins}/60`);}});
+test('clock choices do not encode a fixed forward shift',()=>{let wins=0;for(const p of samples('clock',20,120)){const opts=p.options.map(s=>s.split(':').map(Number)),hours=[...new Set(opts.map(a=>a[0]))],minutes=[...new Set(opts.map(a=>a[1]))],hour=hours.find(h=>hours.includes(h%12+1)),minute=minutes.find(m=>minutes.includes((m+5)%60));wins+=opts.findIndex(([h,m])=>h===hour&&m===minute)===p.solution;}assert.ok(wins<60);});
+test('alphametic correct option is not the sum-and-difference frequency hub',()=>{let wins=0;for(const p of samples('alphametic',20,120)){const sums=p.options.map(v=>Math.floor(v/10)+v%10),diffs=p.options.map(v=>Math.floor(v/10)-v%10),hits=p.options.map((_,i)=>i).filter(i=>sums.filter(v=>v===sums[i]).length>1&&diffs.filter(v=>v===diffs[i]).length>1);wins+=hits.length===1&&hits[0]===p.solution;}assert.ok(wins<40);});

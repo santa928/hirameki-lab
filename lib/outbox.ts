@@ -1,0 +1,8 @@
+/** Only unsent immutable session records live here. D1 remains the record of progress. */
+export interface OutboxStore<T>{put(record:T):Promise<void>;list():Promise<T[]>;remove(id:string):Promise<void>}
+export function indexedOutbox<T extends{id:string}>():OutboxStore<T>{
+ const open=()=>new Promise<IDBDatabase>((resolve,reject)=>{if(typeof indexedDB==='undefined'){reject(Error('保存領域を利用できません'));return;}const request=indexedDB.open('hirameki-outbox-v1',1);request.onupgradeneeded=()=>request.result.createObjectStore('sessions',{keyPath:'id'});request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error);});
+ async function run<R>(mode:IDBTransactionMode,work:(s:IDBObjectStore)=>IDBRequest<R>):Promise<R>{const db=await open();return new Promise((resolve,reject)=>{const tx=db.transaction('sessions',mode),request=work(tx.objectStore('sessions'));let result:R;request.onsuccess=()=>result=request.result;tx.oncomplete=()=>{db.close();resolve(result);};tx.onerror=()=>{db.close();reject(tx.error||request.error);};tx.onabort=()=>{db.close();reject(tx.error||Error('保存を中断しました'));};});}
+ return{put:async record=>{await run('readwrite',s=>s.put(record));},list:()=>run('readonly',s=>s.getAll()) as Promise<T[]>,remove:async id=>{await run('readwrite',s=>s.delete(id));}};
+}
+export function durablePersist<T extends{id:string}>(store:OutboxStore<T>,send:(record:T)=>Promise<void>,onDurability?:(id:string,durable:boolean)=>void){return async(record:T)=>{onDurability?.(record.id,false);let stored=false;try{await store.put(record);stored=true;onDurability?.(record.id,true);}catch{onDurability?.(record.id,false);}await send(record);if(stored)await store.remove(record.id);};}

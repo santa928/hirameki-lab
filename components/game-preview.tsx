@@ -1,0 +1,4 @@
+'use client';
+import React,{useState,useEffect,useRef,useMemo}from'react';import{generate}from'@/lib/puzzles';import{PuzzleView}from'./puzzle-view';
+function PreviewPuzzle({id}:{id:string}){const p=useMemo(()=>generate(id,1,14),[id]);return <PuzzleView p={p} demo/>;}
+export function GamePreview({id}:{id:string}){const ref=useRef<HTMLDivElement>(null),[visible,setVisible]=useState(false);useEffect(()=>{if(!ref.current)return;if(typeof IntersectionObserver==='undefined'){setVisible(true);return;}const observer=new IntersectionObserver(entries=>{if(entries.some(e=>e.isIntersecting)){setVisible(true);observer.disconnect();}},{rootMargin:'180px'});observer.observe(ref.current);return()=>observer.disconnect();},[id]);return <div ref={ref} className="preview-mount" inert aria-hidden="true">{visible?<PreviewPuzzle id={id}/>:<span className="preview-placeholder">✦</span>}</div>;}

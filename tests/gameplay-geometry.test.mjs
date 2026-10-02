@@ -1,0 +1,13 @@
+import assert from'node:assert/strict';import{test}from'node:test';import{generate,check}from'../lib/puzzles.ts';import{beamTrace}from'../lib/engine/plane.ts';
+test('hard mirror puzzles need at least three changes to any valid orientation',()=>{for(let seed=0;seed<30;seed++){const p=generate('mirrorbeam',20,seed),d=p.data;let min=Infinity;for(let mask=0;mask<2**d.mirrors.length;mask++){const a=d.mirrors.map((_,i)=>(mask>>i)&1);if(check(p,a))min=Math.min(min,a.filter((v,i)=>v!==d.initial[i]).length);}assert.ok(min>=3,`${seed}: ${min}`);}});
+test('advanced triangulations block every automatic fan',()=>{for(let seed=0;seed<40;seed++){const p=generate('triangulate',20,seed);for(let root=0;root<p.data.n;root++){const fan=Array.from({length:p.data.n-3},(_,i)=>[root,(root+i+2)%p.data.n]);assert.equal(check(p,fan),false,`${seed} fan${root}`);}assert.ok(check(p,p.solution));}});
+test('hard square boards do not contain an easier axis-aligned square',()=>{for(let seed=0;seed<40;seed++){const p=generate('square',20,seed),n=p.data.n;for(let y=0;y<n;y++)for(let x=0;x<n;x++)for(let d=1;x+d<n&&y+d<n;d++)assert.equal(check(p,[y*n+x,y*n+x+d,(y+d)*n+x,(y+d)*n+x+d]),false,`${seed}/${x}/${y}/${d}`);}});
+test('parking solutions do not come from a constant coordinate lattice',()=>{let wins=0;for(let seed=0;seed<60;seed++){const p=generate('coinparking',20,seed);wins+=check(p,p.data.points.map(([x,y],i)=>[1.5,4.5,7.5].includes(x)&&[1.5,4.5,7.5].includes(y)?i:-1).filter(i=>i>=0).slice(0,p.data.k));}assert.ok(wins<20);});
+test('advanced folded paper does not collapse to six answer masks',()=>{const masks=new Set();for(let seed=0;seed<100;seed++)masks.add(JSON.stringify(generate('foldpunch',20,seed).data));assert.ok(masks.size>40,`${masks.size}`);});
+test('upper-level tiling presents independently turned pieces',()=>{let turned=0;for(let seed=0;seed<40;seed++){const p=generate('tiling',20,seed);turned+=p.solution.some(a=>a.q!==0);assert.ok(check(p,p.solution));}assert.ok(turned>20);});
+test('inside fallback never labels an outside point as inside after polygon rotation',()=>{const p=generate('inside',1,21);for(const i of p.solution){let winding=0;const point=p.data.points[i];for(let j=0;j<p.data.poly.length;j++){const a=p.data.poly[j],b=p.data.poly[(j+1)%p.data.poly.length];if((a[1]>point[1])!==(b[1]>point[1])&&point[0]<(b[0]-a[0])*(point[1]-a[1])/(b[1]-a[1])+a[0])winding++;}assert.equal(winding%2,1);}assert.equal(new Set(p.data.points.map(JSON.stringify)).size,p.data.points.length);});
+test('parking restarts jammed layouts instead of failing in free play',()=>{
+ for(const seed of [1392,2603,5015,8451,9434,9546]){
+  const p=generate('coinparking',20,seed);assert.equal(check(p,p.solution),true);
+ }
+});
