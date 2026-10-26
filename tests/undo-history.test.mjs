@@ -14,10 +14,10 @@ for(const deferStateUpdates of [false,true])test(`frogs jump undo restores the p
  let tree=h.render();assert.deepEqual(board(tree).props.state,[0,1,-1]);assert.equal(actions(tree)[0].props.disabled,true);
  board(tree).props.onMove(2);tree=h.render();assert.deepEqual(board(tree).props.state,[-1,1,0]);assert.equal(actions(tree)[0].props.disabled,false);
  actions(tree)[0].props.onClick();tree=h.render();assert.deepEqual(board(tree).props.state,[0,1,-1]);assert.equal(actions(tree)[0].props.disabled,true);assert.deepEqual(calls,[]);
- // A rejected move must not add an undo entry; reset must clear it.
+ // 拒否された操作は履歴に追加せず、やりなおすで履歴を空にする。
  board(tree).props.onMove(1);tree=h.render();assert.equal(actions(tree)[0].props.disabled,true);
  board(tree).props.onMove(2);tree=h.render();actions(tree)[1].props.onClick();tree=h.render();assert.deepEqual(board(tree).props.state,[0,1,-1]);assert.equal(actions(tree)[0].props.disabled,true);
- // Undo after completion clears the submission guard so the move can be retried.
+ // 完了後のUndoで送信済みフラグを解除し、同じ操作を再試行できる。
  for(const move of p.solution){board(tree).props.onMove(move);tree=h.render();}assert.equal(calls.length,1);
  actions(tree)[0].props.onClick();tree=h.render();assert.deepEqual(board(tree).props.state,[-1,1,0]);
  board(tree).props.onMove(p.solution.at(-1));h.render();assert.equal(calls.length,2);assert.equal(JSON.stringify(p),before);
