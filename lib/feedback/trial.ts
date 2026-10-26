@@ -68,6 +68,8 @@ export function diagnoseTrialAction(p:Pick<Puzzle,'id'|'data'>,state:any,action:
   if(id==='frogs') {
     if(!validIndex(action,state.length)||!state[action])return fail('selection','うごかす カエルを えらぼう。あきマスは うごかせないよ。');
     const empty=state.indexOf(0),dir=state[action],delta=empty-action;
+    const forward=action+dir,landing=action+2*dir;
+    if(state[forward]===-dir&&(landing<0||landing>=state.length))return fail('jump-boundary',`${action+1}ばんの カエルの まえには あいてが いるよ。とびこした さきは ばんの そとだよ。`,[cell(action)]);
     if(delta*dir<0)return fail('backwards',`${action+1}ばんの カエルは ${dir===1?'みぎ →':'ひだり ←'}にだけ すすめるよ。`,[cell(action)]);
     if(Math.abs(delta)>2)return fail('distance','すすめるのは 1マスか、あいてを とびこす 2マスだよ。',[cell(action)]);
     if(delta===2*dir&&state[action+dir]!==-dir)return fail('jump','とびこせるのは、はんたいむきの カエル 1ぴきだよ。',[cell(action+dir)]);
