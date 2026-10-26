@@ -16,7 +16,9 @@ const cases=[
  ['pegs distance',puzzle('pegs',{n:3}),[0,1],{from:0,to:4},'pegs.distance',[]],
  ['pegs missing middle',puzzle('pegs',{n:3}),[0],{from:0,to:2},'pegs.middle',[{type:'cell',index:1}]],
  ['pegs occupied',puzzle('pegs',{n:3}),[0,1,2],{from:0,to:2},'pegs.occupied',[{type:'cell',index:2}]],
- ['frogs backwards',puzzle('frogs',{}),[0,1,-1],1,'frogs.backwards',[{type:'cell',index:1}]],
+ ['frogs backwards',puzzle('frogs',{}),[0,1,-1,1],1,'frogs.backwards',[{type:'cell',index:1}]],
+ ['frogs jump beyond right edge',puzzle('frogs',{}),[0,1,-1],1,'frogs.jump-boundary',[{type:'cell',index:1}]],
+ ['frogs jump beyond left edge',puzzle('frogs',{}),[1,-1,0],1,'frogs.jump-boundary',[{type:'cell',index:1}]],
  ['frogs too far',puzzle('frogs',{}),[1,-1,-1,0],0,'frogs.distance',[{type:'cell',index:0}]],
  ['frogs same team',puzzle('frogs',{}),[1,1,0],0,'frogs.jump',[{type:'cell',index:1}]],
  ['traffic boundary',puzzle('traffic',{n:3,cars:[{axis:'h',lane:0,len:2}]}),[0],{car:0,delta:-1},'traffic.boundary',[]],
@@ -44,6 +46,15 @@ for(const [name,p,state,action,code,targets] of cases)test(name,()=>{
  assert.equal(result.phase,'invalid');
  assert.ok(result.message.length>5);
  assert.equal(JSON.stringify({p,state,action}),before);
+});
+
+test('frogs explains the occupied forward cell and out-of-board landing without changing legal moves',()=>{
+ const p=puzzle('frogs',{});
+ for(const state of [[0,1,-1],[1,-1,0]]){
+  const reason=explainRejectedAction(p,state,1);
+  assert.match(reason.message,/まえ.*あいて/);assert.match(reason.message,/とびこした.*ばんの そと/);
+  const legal=state[0]===0?2:0;assert.ok(trialStep(p,state,legal));assert.equal(explainRejectedAction(p,state,legal),null);
+ }
 });
 
 test('one remaining ball explains the eliminating observation, with no extra weighing instruction',()=>{
