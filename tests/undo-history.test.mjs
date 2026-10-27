@@ -5,9 +5,30 @@ import {project,projectRequire,loadSource} from './helpers/tsx-source.mjs';
 import {hookHarness,findElement} from './helpers/ui-hook-harness.mjs';
 const {renderToStaticMarkup}=projectRequire('react-dom/server');
 const {ExtendedPuzzleView,TouchBoard}=loadSource(project+'/components/extended-puzzle.tsx');
+const {PuzzleView}=loadSource(project+'/components/puzzle-view.tsx');
 const {TrialBoard}=loadSource(project+'/components/trial-board.tsx');
 const actions=tree=>findElement(tree,n=>n.props?.className==='extended-actions').props.children;
 const board=tree=>findElement(tree,n=>n.type===TrialBoard);
+
+for(const deferStateUpdates of [false,true])test(`Sudoku edits and erases undo to the displayed previous value (deferred=${deferStateUpdates})`,()=>{
+ const p=generateStage('sudoku',1,0),before=JSON.stringify(p),calls=[],el=PuzzleView({p,onAnswer:a=>calls.push(a)}),h=hookHarness(el.type,el.props,{deferStateUpdates});
+ const at=p.data.initial.findIndex(v=>!v),cell=()=>findElement(h.render(),n=>n.type==='button'&&n.props['aria-label']?.startsWith(`マス ${at+1} `)),action=()=>findElement(h.render(),n=>n.props?.className==='board-actions').props.children;
+ const value=()=>cell().props['aria-label'];
+ const input=number=>{cell().props.onClick();const keypad=findElement(h.render(),n=>n.props?.className==='sudoku-keypad');(number===0?keypad.props.children[1]:keypad.props.children[0][number-1]).props.onClick();};
+ input(3);assert.equal(value(),`マス ${at+1} 3`);action()[0].props.onClick();assert.equal(value(),`マス ${at+1} から`);assert.equal(action()[0].props.disabled,true);
+ input(3);input(0);assert.equal(value(),`マス ${at+1} から`);action()[0].props.onClick();assert.equal(value(),`マス ${at+1} 3`);action()[0].props.onClick();assert.equal(value(),`マス ${at+1} から`);
+ assert.deepEqual(calls,[]);assert.equal(JSON.stringify(p),before);
+});
+
+test('original path moves queued before render retain each previous path',()=>{
+ const p=generateStage('maze',1,0),el=PuzzleView({p}),h=hookHarness(el.type,el.props,{deferStateUpdates:true}),tree=h.render();
+ const cell=at=>findElement(tree,n=>n.type==='button'&&n.props['aria-label']===`マス ${at+1}`);
+ for(const at of p.solution.slice(1,3))cell(at).props.onClick();
+ const path=()=>findElement(h.render(),n=>n.type==='polyline'&&n.props.stroke==='#079d90').props.points;
+ const points=a=>a.map(i=>`${(i%p.data.n)*100+50},${Math.floor(i/p.data.n)*100+50}`).join(' ');
+ const undo=()=>findElement(h.render(),n=>n.props?.className==='board-actions').props.children[0];
+ assert.equal(path(),points(p.solution.slice(0,3)));undo().props.onClick();assert.equal(path(),points(p.solution.slice(0,2)));undo().props.onClick();assert.equal(path(),points([p.data.start]));assert.equal(undo().props.disabled,true);
+});
 
 for(const deferStateUpdates of [false,true])test(`frogs jump undo restores the previous board (deferred=${deferStateUpdates})`,()=>{
  const p=generateStage('frogs',1,0),before=JSON.stringify(p),calls=[],h=hookHarness(ExtendedPuzzleView,{p,onAnswer:a=>calls.push(a)},{deferStateUpdates});
