@@ -86,3 +86,27 @@ test('stroke normal drag over the current endpoint stays quiet while older visit
  const p=generateStage('stroke',1,0),calls=[],el=PuzzleView({p,onAnswer:a=>calls.push(a)}),h=harness(el.type,el.props),cell=i=>find(h.render(),n=>n.type==='button'&&n.props['aria-label']==='マス '+(i+1)),notice=()=>html(find(h.render(),n=>n.props?.className==='puzzle-notice'));
  cell(1).props.onClick();assert.doesNotMatch(notice(),/もう通った/);cell(2).props.onClick();cell(2).props.onClick();assert.doesNotMatch(notice(),/もう通った/);cell(5).props.onClick();cell(1).props.onClick();assert.match(notice(),/もう通った.*直前/);cell(2).props.onClick();assert.doesNotMatch(notice(),/もう通った/);assert.equal(calls.length,0);
 });
+
+test('数カードの選択状態は切替・Undo・reset・お手本でも支援技術へ伝わる',()=>{
+ for(const id of ['sum','factors','numberpath']){
+  const p=generateStage(id,1,0),calls=[],h=harness(ExtendedPuzzleView,{p,onAnswer:a=>calls.push(a)});
+  const cards=()=>find(h.render(),n=>n.props?.className==='number-cards').props.children;
+  const states=()=>cards().map(n=>n.props['aria-pressed']);
+  const empty=p.data.values.map(()=>false);
+  assert.deepEqual(states(),empty,id+' 初期');
+  cards()[0].props.onClick();assert.equal(states()[0],true,id+' 選択');
+  cards()[0].props.onClick();assert.deepEqual(states(),empty,id+' 解除');
+  find(h.render(),n=>n.props?.className==='extended-actions').props.children[0].props.onClick();
+  assert.equal(states()[0],true,id+' Undo');
+  find(h.render(),n=>n.props?.className==='extended-actions').props.children[1].props.onClick();
+  assert.deepEqual(states(),empty,id+' reset');assert.equal(calls.length,0);
+  for(const flags of [{demo:true},{locked:true}]){
+   const frozen=harness(ExtendedPuzzleView,{p,...flags,playbackAnswer:[0],onAnswer:a=>calls.push(a)});
+   const tree=frozen.render(),buttons=find(tree,n=>n.props?.className==='number-cards').props.children;
+   assert.equal(find(tree,n=>n.type==='fieldset').props.disabled,true);
+   assert.deepEqual(buttons.map(n=>n.props['aria-pressed']),empty.map((_,i)=>i===0));
+   buttons[1].props.onClick();
+   assert.deepEqual(find(frozen.render(),n=>n.props?.className==='number-cards').props.children.map(n=>n.props['aria-pressed']),empty.map((_,i)=>i===0));
+  }
+ }
+});
