@@ -20,7 +20,15 @@ function OriginalPuzzleView({p,onAnswer,locked=false,hint=false,demo=false,playb
  const {id,kind,data:d}=p;
  const completion=answerCompletion(p,answer),localFeedback=kind==='sudoku'&&!demo?explainAnswer(p,answer,{accepted:check(p,answer),submitted:completion.complete,incomplete:!completion.complete}):null;
  const currentFeedback=answerFeedback??localFeedback,currentNoticeId=answerFeedback?'answer-feedback':'editing-feedback';
- function update(a:any,auto=true){if(locked||submitted.current||demo)return;onEdit?.();setOperationNotice('');setHistory(h=>[...h.slice(-200),answerRef.current]);answerRef.current=a;setAnswer(a);if(auto&&check(p,a)){submitted.current=true;onAnswer?.(a);}}
+ function update(a:any,auto=true){
+  if(locked||submitted.current||demo)return;
+  onEdit?.();setOperationNotice('');
+  // 履歴の更新が遅延しても、参照を書き換える前の答えを保持する。
+  const previous=answerRef.current;
+  setHistory(h=>[...h.slice(-200),previous]);
+  answerRef.current=a;setAnswer(a);
+  if(auto&&check(p,a)){submitted.current=true;onAnswer?.(a);}
+ }
  function submit(a=answer){if(locked||submitted.current||demo)return;const good=check(p,a);if(good)submitted.current=true;onAnswer?.(a);}
  function reset(){if(locked)return;onEdit?.();setOperationNotice('');submitted.current=false;setAnswer(initialAnswer(p));answerRef.current=initialAnswer(p);setHistory([]);setIncorrect([]);}
  function undo(){if(locked||!history.length)return;onEdit?.();setOperationNotice('');submitted.current=false;const a=history[history.length-1];setAnswer(a);answerRef.current=a;setHistory(history.slice(0,-1));}
