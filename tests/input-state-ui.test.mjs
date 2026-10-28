@@ -135,3 +135,26 @@ test('図形選択肢と文字識別子の既存ラベルを維持する',()=>{
  const letters={...base,options:['A','B','C','D']},letterMarkup=renderState(letters,undefined);
  letters.options.forEach(value=>assert.ok(letterMarkup.includes(`aria-label="こたえ ${value}"`)));
 });
+
+test('盤面のぬる・メモモードは実際の選択状態を支援技術へ伝える',()=>{
+ for(const id of ['nonogram','minestars','tents','islands']){
+  const p=generateStage(id,1,0),calls=[],h=harness(ExtendedPuzzleView,{p,onAnswer:a=>calls.push(a)});
+  const tools=()=>all(h.render()).filter(n=>n.type==='button'&&['ぬる','× メモ'].includes(n.props.children));
+  const states=()=>tools().map(n=>n.props['aria-pressed']);
+  assert.deepEqual(states(),[true,false],id+' 初期');
+  tools()[1].props.onClick();assert.deepEqual(states(),[false,true],id+' メモ');
+  tools()[0].props.onClick();assert.deepEqual(states(),[true,false],id+' ぬる');
+  tools()[1].props.onClick();
+  find(h.render(),n=>n.props?.className==='extended-actions').props.children[1].props.onClick();
+  assert.deepEqual(states(),[false,true],id+' reset後も現在のモード');
+  assert.deepEqual(tools().map(n=>n.props.className==='selected'),states(),id+' 視覚表示と一致');
+  assert.equal(calls.length,0,id+' モード切替は提出しない');
+  for(const flags of [{demo:true},{locked:true}]){
+   const tree=harness(ExtendedPuzzleView,{p,...flags,onAnswer:()=>{}}).render();
+   assert.equal(find(tree,n=>n.type==='fieldset').props.disabled,true);
+   assert.deepEqual(all(tree).filter(n=>n.type==='button'&&['ぬる','× メモ'].includes(n.props.children)).map(n=>n.props['aria-pressed']),[true,false]);
+  }
+ }
+ const binary=harness(ExtendedPuzzleView,{p:generateStage('binary',1,0),onAnswer:()=>{}}).render();
+ assert.equal(all(binary).filter(n=>n.type==='button'&&['ぬる','× メモ'].includes(n.props.children)).length,0);
+});
