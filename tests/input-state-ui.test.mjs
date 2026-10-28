@@ -112,3 +112,26 @@ test('数カードの選択状態は切替・Undo・reset・お手本でも支�
   }
  }
 });
+
+test('数値選択肢の名前は表示された値と記号を含む',()=>{
+ const base=generateStage('count',1,0),samples=[...[1,27,54].map(stage=>generateStage('count',stage,0)),{...base,options:[0,'0',{type:'text',text:'0',sub:'こ'},'みぎ']}];
+ for(const p of samples){
+  const markup=renderState(p,undefined);
+  const buttons=[...markup.matchAll(/<button\b([^>]*class="extended-option[^\"]*"[^>]*)>([\s\S]*?)<\/button>/g)];
+  assert.equal(buttons.length,p.options.length);
+  buttons.forEach(([,attributes,content],i)=>{
+   const name=attributes.match(/aria-label="([^"]*)"/)?.[1]??content.replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim();
+   const option=p.options[i],value=option?.type==='text'?option.text:String(option);
+   assert.ok(name.includes(value),`${i}: 表示値を含む名前 ${name}`);
+   if(option?.type==='text'&&option.sub)assert.ok(name.includes(option.sub));
+   assert.ok(name.includes(String.fromCharCode(65+i)),`${i}: 記号を含む名前 ${name}`);
+  });
+ }
+});
+
+test('図形選択肢と文字識別子の既存ラベルを維持する',()=>{
+ const base=generateStage('count',1,0),p={...base,options:base.options.map((_,i)=>({type:'shape',cells:[[0,0],[i+1,0]],extent:5}))},markup=renderState(p,undefined);
+ p.options.forEach((_,i)=>assert.ok(markup.includes(`aria-label="こたえ ${i+1}"`)));
+ const letters={...base,options:['A','B','C','D']},letterMarkup=renderState(letters,undefined);
+ letters.options.forEach(value=>assert.ok(letterMarkup.includes(`aria-label="こたえ ${value}"`)));
+});
