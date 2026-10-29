@@ -189,3 +189,27 @@ test('ペアの操作用先端は再生・previewへ重ねず、lockedの現在�
  assert.equal(find(tree,n=>n.type==='fieldset').props.disabled,true);
  assert.equal(b.props.cellLabels?.[p.data.pairs[0][0]],'1ばんの みちの さき');
 });
+
+
+test('ライトの点灯状態は自分と隣の反転・Undo・reset・完成に一致する',()=>{
+ const base=generateStage('lights',1,0),initial=[1,1,1,0,1,0,0,0,0],p={...base,data:{...base.data,n:3,initial},solution:Array(9).fill(0)},calls=[];
+ assert.equal(check(p,p.solution),true);
+ const element=PuzzleView({p,onAnswer:a=>calls.push(a)}),h=harness(element.type,element.props),cells=()=>all(h.render()).filter(n=>n.type==='button'&&n.props.className?.startsWith('grid-cell'));
+ const state=expected=>{const buttons=cells();assert.deepEqual(buttons.map(n=>n.props['aria-pressed']),expected.map(Boolean));assert.deepEqual(buttons.map(n=>n.props.className.split(' ').includes('lit')),expected.map(Boolean));assert.deepEqual(buttons.map(n=>n.props['aria-label']),expected.map((_,i)=>'マス '+(i+1)));};
+ state(initial);cells()[0].props.onClick();state([0,0,1,1,1,0,0,0,0]);assert.equal(calls.length,0);
+ find(h.render(),n=>n.props?.className==='board-actions').props.children[0].props.onClick();state(initial);
+ cells()[0].props.onClick();find(h.render(),n=>n.props?.className==='board-actions').props.children[1].props.onClick();state(initial);
+ cells()[1].props.onClick();state(Array(9).fill(0));assert.deepEqual(calls,[p.solution]);
+});
+
+test('ライトの再生・操作不可でも点灯状態を示し、他の盤面へtoggle状態を加えない',()=>{
+ const p=generateStage('lights',1,0),playback=[0,1,0,1,0,0,0,0,1];
+ for(const flags of [{locked:true},{demo:true}]){
+  const element=PuzzleView({p,...flags,playbackAnswer:playback,onAnswer:()=>{}}),tree=harness(element.type,element.props).render(),buttons=all(tree).filter(n=>n.type==='button'&&n.props.className?.startsWith('grid-cell'));
+  assert.deepEqual(buttons.map(n=>n.props['aria-pressed']),playback.map(Boolean));assert.ok(buttons.every(n=>n.props.disabled));
+ }
+ for(const id of ['slide','rails','sudoku','maze']){
+  const p=generateStage(id,1,0),element=PuzzleView({p,onAnswer:()=>{}}),tree=harness(element.type,element.props).render(),buttons=all(tree).filter(n=>n.type==='button'&&n.props.className?.startsWith('grid-cell'));
+  assert.ok(buttons.length>0,id);assert.ok(buttons.every(n=>n.props['aria-pressed']===undefined),id);
+ }
+});
