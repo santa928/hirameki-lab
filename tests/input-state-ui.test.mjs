@@ -158,3 +158,34 @@ test('盤面のぬる・メモモードは実際の選択状態を支援技術�
  const binary=harness(ExtendedPuzzleView,{p:generateStage('binary',1,0),onAnswer:()=>{}}).render();
  assert.equal(all(binary).filter(n=>n.type==='button'&&['ぬる','× メモ'].includes(n.props.children)).length,0);
 });
+
+test('ペアの道の先端は選択・移動・戻る・Undo・resetに追随する',()=>{
+ const base=generateStage('pairroutes',1,0),p={...base,data:{...base.data,n:3,pairs:[[6,2],[1,4]],initial:[[6],[1]]},solution:[[6,7,8,5,2],[1,0,3,4]]},calls=[];
+ assert.equal(check(p,p.solution),true);
+ const h=harness(ExtendedPuzzleView,{p,onAnswer:a=>calls.push(a)}),board=()=>find(h.render(),n=>n.type===TouchBoard),palette=()=>find(h.render(),n=>n.props?.className==='paint-palette').props.children;
+ const tip=(at,label)=>{const b=board();assert.equal(b.props.cellLabels?.[at],label);assert.deepEqual(b.props.classes?.flatMap((v,i)=>v==='pair-path-tip'?[i]:[]),[at]);};
+ tip(6,'1ばんの みちの さき');assert.deepEqual(palette().map(n=>n.props['aria-pressed']),[true,false]);
+ board().props.onCell(2);board().props.onCell(5);tip(6,'1ばんの みちの さき');assert.equal(calls.length,0);
+ board().props.onCell(7);tip(7,'1ばんの みちの さき');
+ board().props.onCell(6);tip(6,'1ばんの みちの さき');
+ board().props.onCell(7);find(h.render(),n=>n.props?.className==='extended-actions').props.children[0].props.onClick();tip(6,'1ばんの みちの さき');
+ palette()[1].props.onClick();tip(1,'2ばんの みちの さき');assert.deepEqual(palette().map(n=>n.props['aria-pressed']),[false,true]);
+ board().props.onCell(0);tip(0,'2ばんの みちの さき');
+ find(h.render(),n=>n.props?.className==='extended-actions').props.children[1].props.onClick();tip(1,'2ばんの みちの さき');
+ palette()[0].props.onClick();for(const at of [7,8,5,2])board().props.onCell(at);assert.equal(calls.length,0);
+ palette()[1].props.onClick();for(const at of [0,3,4])board().props.onCell(at);
+ assert.deepEqual(calls,[p.solution]);tip(4,'2ばんの みちの さき');
+});
+
+test('ペアの操作用先端は再生・previewへ重ねず、lockedの現在状態は維持する',()=>{
+ const p=generateStage('pairroutes',1,0);
+ for(const flags of [{demo:true},{locked:true,playbackAnswer:p.solution}]){
+  const tree=harness(ExtendedPuzzleView,{p,...flags,onAnswer:()=>{}}).render(),b=find(tree,n=>n.type===TouchBoard);
+  assert.equal(find(tree,n=>n.type==='fieldset').props.disabled,true);
+  assert.ok(!b.props.classes?.includes('pair-path-tip'));
+  assert.ok(!b.props.cellLabels?.some(Boolean));
+ }
+ const tree=harness(ExtendedPuzzleView,{p,locked:true,onAnswer:()=>{}}).render(),b=find(tree,n=>n.type===TouchBoard);
+ assert.equal(find(tree,n=>n.type==='fieldset').props.disabled,true);
+ assert.equal(b.props.cellLabels?.[p.data.pairs[0][0]],'1ばんの みちの さき');
+});
