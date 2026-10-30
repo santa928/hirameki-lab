@@ -246,3 +246,48 @@ test('レールの再生・操作不可でも表示中の方向を示し、他�
   assert.ok(buttons.length>0,id);assert.ok(buttons.every(n=>!n.props['aria-label'].startsWith('レール ')),id);
  }
 });
+
+function tilingSelectionFixture(){
+ const base=generateStage('tiling',1,0);
+ return {...base,data:{...base.data,n:2,rows:2,pieces:[[[0,0],[1,0]],[[0,0],[1,0]]],initial:[]},solution:[{piece:0,x:0,y:0,q:0},{piece:1,x:0,y:1,q:0}]};
+}
+test('しきつめピースの選択状態は切替・解除・回転・配置・はずす・Undo・resetに追随する',()=>{
+ const p=tilingSelectionFixture(),before=JSON.stringify(p),calls=[],h=harness(ExtendedPuzzleView,{p,onAnswer:a=>calls.push(a)});
+ assert.equal(check(p,p.solution),true);assert.equal(check(p,[]),false);
+ const pieces=()=>find(h.render(),n=>n.props?.className==='piece-bank').props.children;
+ const board=()=>find(h.render(),n=>n.type===TouchBoard),controls=()=>find(h.render(),n=>n.props?.className==='control-row').props.children,actions=()=>find(h.render(),n=>n.props?.className==='extended-actions').props.children;
+ const state=(pressed,names=['1','2'])=>{const buttons=pieces();assert.deepEqual(buttons.map(n=>n.props['aria-pressed']),pressed);assert.deepEqual(buttons.map(n=>n.props.className==='selected'),pressed);assert.deepEqual(buttons.map(n=>html(n.props.children[1])),names.map(name=>'<small>'+name+'</small>'));};
+ const floor=values=>assert.deepEqual(board().props.values.map(v=>v?.props.children??null),values);
+ state([false,false]);floor([null,null,null,null]);
+ pieces()[0].props.onClick();state([true,false]);
+ pieces()[1].props.onClick();state([false,true]);
+ pieces()[1].props.onClick();state([false,false]);
+ pieces()[0].props.onClick();controls()[0].props.onClick();state([true,false]);
+ assert.deepEqual(pieces()[0].props.children[0].props.cells,[[0,0],[0,1]]);
+ board().props.onCell(2);state([true,false]);floor([null,null,null,null]);
+ board().props.onCell(0);state([false,false],['1 ✓','2']);floor([1,null,1,null]);
+ board().props.onCell(2);state([true,false],['1 ✓','2']);
+ assert.deepEqual(pieces()[0].props.children[0].props.cells,[[0,0],[0,1]]);
+ controls()[1].props.onClick();state([true,false]);floor([null,null,null,null]);
+ actions()[0].props.onClick();state([false,false],['1 ✓','2']);floor([1,null,1,null]);
+ pieces()[1].props.onClick();actions()[0].props.onClick();state([false,false]);floor([null,null,null,null]);
+ pieces()[1].props.onClick();actions()[1].props.onClick();state([false,false]);assert.equal(calls.length,0);
+ pieces()[0].props.onClick();board().props.onCell(0);state([false,false],['1 ✓','2']);
+ pieces()[1].props.onClick();board().props.onCell(2);state([false,false],['1 ✓','2 ✓']);floor([1,1,2,2]);
+ assert.deepEqual(calls,[[{piece:0,x:0,y:0,q:0},{piece:1,x:0,y:1,q:0}]]);assert.equal(JSON.stringify(p),before);
+});
+
+test('しきつめの配置済み表示と選択は別々に保ち、locked・previewでも描画中の選択を示す',()=>{
+ const p=tilingSelectionFixture(),playback=[{piece:0,x:0,y:0,q:1}];
+ for(const flag of ['locked','demo']){
+  const props={p,playbackAnswer:playback,onAnswer:()=>{}},h=harness(ExtendedPuzzleView,props),pieces=()=>find(h.render(),n=>n.props?.className==='piece-bank').props.children;
+  props[flag]=true;
+  assert.equal(find(h.render(),n=>n.type==='fieldset').props.disabled,true);
+  assert.deepEqual(pieces().map(n=>n.props['aria-pressed']),[false,false]);
+  assert.deepEqual(pieces().map(n=>html(n.props.children[1])),['<small>1 ✓</small>','<small>2</small>']);
+  props[flag]=false;pieces()[1].props.onClick();props[flag]=true;
+  assert.equal(find(h.render(),n=>n.type==='fieldset').props.disabled,true);
+  assert.deepEqual(pieces().map(n=>n.props['aria-pressed']),[false,true]);
+  assert.deepEqual(pieces().map(n=>n.props.className==='selected'),[false,true]);
+ }
+});
