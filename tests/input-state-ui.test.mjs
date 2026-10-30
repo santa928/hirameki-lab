@@ -213,3 +213,36 @@ test('ライトの再生・操作不可でも点灯状態を示し、他の盤�
   assert.ok(buttons.length>0,id);assert.ok(buttons.every(n=>n.props['aria-pressed']===undefined),id);
  }
 });
+
+
+function railLabelFixture(){
+ const base=generateStage('rails',1,0);
+ return {...base,data:{...base.data,n:3,types:[0,1,0,1,0,1,0,1,0],initial:Array(9).fill(0),start:2,end:6,path:[2,5,4,3,6]},solution:[0,0,0,1,1,3,0,0,0]};
+}
+test('レール名は現在の接続先・座標・入口出口を回転とUndo/reset後も示す',()=>{
+ const p=railLabelFixture(),before=JSON.stringify(p),calls=[],element=PuzzleView({p,onAnswer:a=>calls.push(a)}),h=harness(element.type,element.props),cells=()=>all(h.render()).filter(n=>n.type==='button'&&n.props.className?.startsWith('grid-cell'));
+ assert.equal(check(p,p.solution),true);assert.equal(check(p,p.data.initial),false);
+ const label=i=>cells()[i].props['aria-label'];
+ assert.equal(label(0),'レール 1、1ぎょう 1れつ、うえとしたが つながる');
+ assert.equal(label(2),'レール 3、1ぎょう 3れつ、うえとしたが つながる、いりぐち');
+ assert.equal(label(6),'レール 7、3ぎょう 1れつ、うえとしたが つながる、でぐち');
+ for(const [direction,path] of [['みぎとした','M100 50 L50 50 L50 100'],['したとひだり','M50 100 L50 50 L0 50'],['うえとひだり','M0 50 L50 50 L50 0'],['うえとみぎ','M50 0 L50 50 L100 50']]){
+  cells()[1].props.onClick();assert.equal(label(1),'レール 2、1ぎょう 2れつ、'+direction+'が つながる');assert.equal(find(cells()[1],n=>n.type==='path').props.d,path);
+ }
+ cells()[0].props.onClick();assert.match(label(0),/みぎとひだり/);
+ find(h.render(),n=>n.props?.className==='board-actions').props.children[0].props.onClick();assert.match(label(0),/うえとした/);
+ cells()[0].props.onClick();find(h.render(),n=>n.props?.className==='board-actions').props.children[1].props.onClick();assert.match(label(0),/うえとした/);assert.match(label(1),/うえとみぎ/);assert.equal(calls.length,0);
+ for(const i of [3,4,5,5,5])cells()[i].props.onClick();assert.deepEqual(calls,[p.solution]);assert.equal(JSON.stringify(p),before);
+});
+
+test('レールの再生・操作不可でも表示中の方向を示し、他の盤面名を維持する',()=>{
+ const p=railLabelFixture(),playback=[0,2,1,0,0,0,0,0,0];
+ for(const flags of [{locked:true},{demo:true}]){
+  const element=PuzzleView({p,...flags,playbackAnswer:playback,onAnswer:()=>{}}),tree=harness(element.type,element.props).render(),buttons=all(tree).filter(n=>n.type==='button'&&n.props.className?.startsWith('grid-cell'));
+  assert.equal(buttons[1].props['aria-label'],'レール 2、1ぎょう 2れつ、したとひだりが つながる');assert.equal(buttons[2].props['aria-label'],'レール 3、1ぎょう 3れつ、みぎとひだりが つながる、いりぐち');assert.ok(buttons.every(n=>n.props.disabled));
+ }
+ for(const id of ['lights','slide','sudoku','maze']){
+  const p=generateStage(id,1,0),element=PuzzleView({p,onAnswer:()=>{}}),tree=harness(element.type,element.props).render(),buttons=all(tree).filter(n=>n.type==='button'&&n.props.className?.startsWith('grid-cell'));
+  assert.ok(buttons.length>0,id);assert.ok(buttons.every(n=>!n.props['aria-label'].startsWith('レール ')),id);
+ }
+});
