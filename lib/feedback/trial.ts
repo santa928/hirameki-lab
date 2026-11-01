@@ -2,9 +2,9 @@ import type {Puzzle} from '../engine/shared.ts';
 import {directed,trialStep} from '../engine/trial.ts';
 import type {Feedback,FeedbackTarget} from '../feedback.ts';
 
-/** Only these rejected-action adapters are implemented; other games return null. */
+/** 答案全体の診断にも使う一覧。容量拒否だけを扱うtrainyardは含めない。 */
 export const TRIAL_FEEDBACK_IDS = ['ballweigh','sokoban','pegs','frogs','traffic','keydoors','twobots','bridge','jugs','river'] as const;
-const supported = new Set<string>(TRIAL_FEEDBACK_IDS);
+const supported = new Set<string>([...TRIAL_FEEDBACK_IDS,'trainyard']);
 const cell = (index:number):FeedbackTarget => ({type:'cell',index});
 const piece = (index:number):FeedbackTarget => ({type:'piece',index});
 const at = (index:number,n:number) => `${Math.floor(index/n)+1}ぎょう ${index%n+1}れつ`;
@@ -24,6 +24,14 @@ export function diagnoseTrialAction(p:Pick<Puzzle,'id'|'data'>,state:any,action:
   if(trialStep(p,state,action)!==null)return null;
   const {id,data:d}=p;
   const fail=(code:string,message:string,targets:FeedbackTarget[]=[])=>reason(id,code,message,targets);
+
+  if(id==='trainyard') {
+    const {from,to}=action??{};
+    const hasSource=from==='in'?state.input.length>0:validIndex(from,state.sidings.length)&&state.sidings[from].length>0;
+    if(!hasSource||from===to||!validIndex(to,state.sidings.length))return null;
+    const count=state.sidings[to].length;
+    return count>=d.capacity?fail('capacity',`${to+1}ばんの たいひせんは ${count} / ${d.capacity}りょうで いっぱいだよ。あきを つくってから うつそう。`):null;
+  }
 
   if(id==='sokoban'||id==='keydoors'||id==='twobots') {
     if(!validIndex(action,4))return fail('direction','うえ・みぎ・した・ひだりの やじるしを えらぼう。');
