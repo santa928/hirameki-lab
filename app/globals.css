@@ -71,6 +71,10 @@
 .scene-row-prose .scene-title{text-align:left;white-space:normal;word-break:normal;overflow-wrap:anywhere;font-size:clamp(18px,2.2vw,25px)}
 .game-liar .scene-row-prose>.scene-text:first-child{background:#ecf6f4;border-radius:14px;padding:12px}
 .game-liar .scene-row-prose>.scene-text:first-child .scene-title{text-align:center}
+.coin-controls{display:flex;flex-direction:column;gap:10px;width:100%;max-width:340px}
+.coin-controls .control-row{display:grid;grid-template-columns:minmax(50px,1fr) 44px minmax(60px,1fr) 44px;gap:10px}
+.coin-controls output{text-align:center;font-size:20px;font-weight:800;font-variant-numeric:tabular-nums}
+.coin-controls button:disabled{color:#98a7af}
 .extended-puzzle .scene-row-mixed{flex-direction:column!important;max-width:580px;align-items:center}
 .scene-row-mixed>.scene-text{max-width:none;width:100%}
 .scene-row-mixed>.scene-text .scene-title{white-space:normal;word-break:normal;overflow-wrap:anywhere;font-size:clamp(18px,2.2vw,25px)}
