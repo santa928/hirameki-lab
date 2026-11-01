@@ -128,16 +128,20 @@ export function explainPlaneAnswer(p:Puzzle,answer:any,options:Options):Feedback
  if(id==='separator'){
   if(a.length<2)return incomplete('仕切り線の両端に、違う二つの外側の点を選ぼう。');if(a.length!==2)return feedback('count','一本の仕切りは、両端の二点だけ選ぼう。');
   const signs=(d.points as number[][]).map(point=>Math.sign(cross(d.anchors[a[0]],d.anchors[a[1]],point))),onLine=signs.findIndex(v=>v===0);if(onLine>=0)return feedback('line',`${onLine+1}番の点が仕切り線の上にあるよ。どの点にも触れない線を探そう。`,[target('cell',onLine),target('constraint',0)]);
-  const wrong=signs.findIndex((s,i)=>s!==(d.groups[i]===d.groups[0]?signs[0]:-signs[0]));if(wrong<0)return null;return feedback('mixed',`${wrong+1}番の点が、同じ種類と同じ側になっていないよ。二種類を別々の側へ分けよう。`,wrong>=0?[target('cell',wrong),target('constraint',0)]:[target('constraint',0)]);
+  const wrong=signs.findIndex((s,i)=>s!==(d.groups[i]===d.groups[0]?signs[0]:-signs[0]));if(wrong<0)return null;
+  // 違う種類が同じ側にある実際の2点を、説明と強調の両方に使う。
+  for(let i=0;i<signs.length;i++)for(let j=i+1;j<signs.length;j++)if(d.groups[i]!==d.groups[j]&&signs[i]===signs[j])return feedback('mixed',`${i+1}番と${j+1}番の点は、違う種類なのに線の同じ側にあるよ。二種類を別々の側へ分けよう。`,[target('cell',i),target('cell',j),target('constraint',0)]);
+  // 異種の点がない場合も、同種が分かれた事実だけを伝える。
+  return feedback('mixed',`1番と${wrong+1}番の点は、同じ種類なのに線の別々の側にあるよ。同じ種類を同じ側へ集めよう。`,[target('cell',0),target('cell',wrong),target('constraint',0)]);
  }
  if(id==='coinparking'){
   for(const i of a){const [x,y]=d.points[i];if(x<d.radius||y<d.radius||x>d.n-d.radius||y>d.n-d.radius)return feedback('boundary',`${i+1}番の円は箱から出るよ。中心から壁まで、半径 ${d.radius}以上あけよう。`,[target('cell',i)]);}
-  for(let i=0;i<a.length;i++)for(let j=i+1;j<a.length;j++){const ds=distance2(d.points[a[i]],d.points[a[j]]),limit=4*d.radius**2;if(ds<limit)return feedback('overlap',`${a[i]+1}番と${a[j]+1}番の円が重なるよ。中心間の距離² ${ds}は、(2×${d.radius})² = ${limit}より小さい。等しければ触れるだけで大丈夫。`,[target('cell',a[i]),target('cell',a[j])]);}
+  for(let i=0;i<a.length;i++)for(let j=i+1;j<a.length;j++){const ds=distance2(d.points[a[i]],d.points[a[j]]),limit=4*d.radius**2;if(ds<limit)return feedback('overlap',`${a[i]+1}番と${a[j]+1}番の円が重なるよ。中心間の距離²は、(2×${d.radius})²より小さい。等しければ触れるだけで大丈夫。`,[target('cell',a[i]),target('cell',a[j])]);}
   if(a.length===d.k)return null;
   return a.length<d.k?incomplete(`重ならない円を ${d.k}こ置こう。今は ${a.length}こ。`):feedback('count',`置く円は ${d.k}こ。今は ${a.length}こ選んでいるよ。`);
  }
  if(id==='inside'){
-  const expected=(d.points as number[][]).map((point,i)=>pointInside(point,d.poly)?i:-1).filter(i=>i>=0),outside=a.find(i=>!expected.includes(i));if(outside!==undefined)return feedback('outside',`${outside+1}番の点は囲いの外側。へこみの空いている部分は内側ではないよ。`,[target('cell',outside)]);const missing=expected.find(i=>!a.includes(i));return missing!==undefined?incomplete(`${missing+1}番の点は囲いの内側にあるよ。内側の点を全部選ぼう。`,[target('cell',missing)]):null;
+  const expected=(d.points as number[][]).map((point,i)=>pointInside(point,d.poly)?i:-1).filter(i=>i>=0),outside=a.find(i=>!expected.includes(i));if(outside!==undefined)return feedback('outside',`${outside+1}番の点は囲いの外側。囲いの辺をたどって、内側か外側かを確かめよう。`,[target('cell',outside)]);const missing=expected.find(i=>!a.includes(i));return missing!==undefined?incomplete(`${missing+1}番の点は囲いの内側にあるよ。内側の点を全部選ぼう。`,[target('cell',missing)]):null;
  }
  if(id==='hull'){
   const expected=hullIndices(d.points),extra=a.find(i=>!expected.includes(i));if(extra!==undefined)return feedback('interior',`${extra+1}番の点は内側か、辺の途中にあるよ。ゴムが曲がる外側の角だけ選ぼう。`,[target('cell',extra)]);const missing=expected.find(i=>!a.includes(i));return missing!==undefined?incomplete(`${missing+1}番の外側の角が足りないよ。全部の点を囲むように角をつなごう。`,[target('cell',missing)]):null;
