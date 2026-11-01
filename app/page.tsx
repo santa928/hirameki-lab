@@ -78,6 +78,7 @@ export default function HomePage(){
  /** Validate the complete file before atomically combining it with existing records. */
  async function restoreBackup(file:File){setBackupBusy(true);setBackupMessage('');try{const added=await importBackup(records,file);await load();setBackupMessage(`${added}件のきろくを追加しました。同じきろくは重ねて数えません。`);}catch(e){setBackupMessage(e instanceof Error?e.message:'読み込めませんでした。きろくは変更していません。');}finally{setBackupBusy(false);if(importInput.current)importInput.current.value='';}}
  const saveState=result?saveStates[result.id]||'saving':'saving';
+ const failedPending=pending.filter(s=>saveStates[s.id]==='failed');
  const finish=useCallback((s:SessionResult)=>{setSession(null);setResult(s);void save(s);},[save]);
  function select(g:Game){setTutorialOpen(false);setSelected(g);const gp=progress.games[g.id],next=Array.from({length:stageCount(g.id)},(_,i)=>i+1).find(s=>!gp?.stages?.[s])||stageCount(g.id);setStage(next);setLevel(Math.max(1,Math.min(20,gp?.level||1)));}
  function start(g:Game,m:Mode,s:number,l:number){setSelected(null);setResult(null);setSession({game:g,mode:m,stage:s,level:l});sound(true,soundOn);window.scrollTo(0,0);}
@@ -91,7 +92,12 @@ export default function HomePage(){
  return <div className="app-shell">
   <header className="site-header"><button className="brand-button" onClick={()=>{setTab('play');setFilter('recommend');}} aria-label="ひらめきラボ ホーム"><Logo/></button><div className="header-right"><button className="profile-button" onClick={()=>setProfiles(true)}><span className="profile-avatar"><Glyph value={profile-1} size={28}/></span><span>{PROFILE_NAMES[profile-1]}</span><ChevronDown size={16}/></button><button className="icon-button" onClick={()=>setSettings(true)} aria-label="せってい"><Settings size={22}/></button></div></header>
   <main className="main-content">
-   {pending.length>0&&<div className="save-warning" role="alert">保存を待っている きろくが {pending.length}件あります。<button onClick={async()=>{for(const s of queueRef.current)await save(s);}}>もういちど 保存</button><small>端末内に保存できませんでした。再試行が済むまで、このページを閉じないでください。</small><button disabled={backupBusy} onClick={()=>void downloadBackup()}>バックアップを 書き出す</button><small role="status">{backupMessage}</small></div>}
+   {pending.length>0&&<div className="save-warning" role={failedPending.length?'alert':'status'}>
+    保存を待っている きろくが {pending.length}件あります。
+    {failedPending.length>0&&<button onClick={async()=>{for(const s of queueRef.current)if(saveStates[s.id]==='failed')await save(s);}}>もういちど 保存</button>}
+    <small>{failedPending.length?`端末内に保存できませんでした（${failedPending.length}件）。再試行が済むまで、このページを閉じないでください。`:'端末内に保存しています。完了するまで、このページを閉じないでください。'}</small>
+    <button disabled={backupBusy} onClick={()=>void downloadBackup()}>バックアップを 書き出す</button><small role="status">{backupMessage}</small>
+   </div>}
    {loadError&&<div className="load-warning">きろくを読み込めませんでした。ゲームは遊べます。<button onClick={()=>void load()}>再読み込み</button></div>}
    {tab==='play'?<>
     <section className="welcome"><div className="welcome-copy"><div className="mini-label"><Sparkles size={15}/>きょうは なにを はっけんする？</div><h1>どれで <span>あそぶ？</span></h1><p>すきな ゲームを えらんでね。</p><div className="welcome-stats"><span><Star size={17} fill="#ffcf54"/>{progress.stars} <small>スター</small></span><span><Check size={17}/>{progress.correct} <small>できた！</small></span></div></div><div className="welcome-visual"><span className="hello-note">いっしょに<br/>かんがえよう！</span><img src={MASCOT} alt="ひらめきラボの案内ロボット"/></div><div className="welcome-side"><ShieldCheck size={18}/>なんどでも あそべる</div></section>
