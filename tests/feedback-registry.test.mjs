@@ -84,3 +84,36 @@ test('count every stage Q1 obeys actual optionAnswer/check boundary without muta
   assert.equal(JSON.stringify(q),before,`stage${stage}: immutable`);
  }
 });
+
+test('digitorder completed leading zero names the selected first card without reading a stored answer',()=>{
+ for(const [values,answer,small] of [[[0,6,7],[0,1,2],false],[[6,0,7],[1,2,0],true],[[6,0,0],[2,0,1],false]]){
+  const q=p('digitorder','arrange',{values,small}),before=JSON.stringify({values,answer,small});
+  Object.defineProperty(q,'solution',{get(){throw Error('正解順を読まない');}});
+  Object.defineProperty(q.data,'target',{get(){throw Error('正解の数を読まない');}});
+  Object.freeze(values);Object.freeze(answer);Object.freeze(q.data);Object.freeze(q);
+  const f=explain(q,answer,{accepted:false,submitted:true});
+  assert.ok(f);assert.equal(f.code,'number.digitorder.leading-zero');assert.equal(f.phase,'invalid');
+  assert.match(f.message,/さいしょ.*0/);assert.match(f.message,/けた/);assert.match(f.message,/0いがい/);
+  assert.deepEqual(f.targets,[{type:'card',index:answer[0]}]);
+  assert.doesNotMatch(f.message,/670|760|607|いちばん/);
+  assert.equal(JSON.stringify({values,answer,small}),before);
+ }
+});
+test('digitorder leaves partial, malformed and nonzero-first answers to existing feedback',()=>{
+ const q=p('digitorder','arrange',{values:[6,0,7]});
+ for(const a of [undefined,null,'102',[],[1],[1,0],[1,0,2,3],[1,0,0],[1,0,-1],[1,0,3],[1,0,1.5],[1,0,'2'],[1,0,undefined],[1,,2],[0,1,2],[2,1,0]]){
+  assert.equal(explain(q,a,{accepted:false,submitted:true}),null,JSON.stringify(a));
+ }
+ assert.equal(explain(q,[1,0,2],{accepted:true,submitted:true}),null);
+ assert.equal(explain({...q,kind:'choice'},[1,0,2],{accepted:false,submitted:true}),null);
+});
+test('digitorder generated cards use the existing verdict while zero alone determines this reason',()=>{
+ for(const level of [1,5,9,13,17,20]){
+  const q=Array.from({length:30},(_,seed)=>generate('digitorder',level,seed)).find(q=>q.data.values.includes(0));
+  assert.ok(q,`level ${level}: zero fixture`);
+  const zero=q.data.values.indexOf(0),a=[zero,...q.data.values.flatMap((_,i)=>i===zero?[]:[i])],before=JSON.stringify({q,a});
+  assert.equal(check(q,a),false);assert.equal(explain(q,a,{accepted:check(q,a),submitted:true})?.code,'number.digitorder.leading-zero');
+  assert.equal(check(q,q.solution),true);assert.equal(explain(q,q.solution,{accepted:check(q,q.solution),submitted:true}),null);
+  assert.equal(JSON.stringify({q,a}),before);
+ }
+});

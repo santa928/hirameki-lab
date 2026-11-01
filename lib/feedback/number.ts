@@ -1,10 +1,17 @@
 import type {Puzzle} from '../engine/shared.ts';
 import type {AnswerStatus,Feedback,FeedbackTarget} from '../feedback.ts';
-export const NUMBER_FEEDBACK_IDS=['count'] as const;
-/** Resolve the same numeric-value or option-index boundary as optionAnswer. */
+export const NUMBER_FEEDBACK_IDS=['count','digitorder'] as const;
+/** 表示中のカードから理由を作り、countはoptionAnswerと同じ数値・選択肢indexの境界を使う。 */
 export function explainNumberAnswer(p:Puzzle,answer:any,status:AnswerStatus):Feedback|null {
- if(p.id!=='count'||status.accepted)return null;
- const d=p.data||{},scene=d.scene;
+ if(status.accepted)return null;
+ const d=p.data||{};
+ if(p.id==='digitorder'){
+  const values=d.values;
+  if(p.kind!=='arrange'||!Array.isArray(values)||!Array.isArray(answer)||answer.length!==values.length||new Set(answer).size!==answer.length||Array.from(answer).some(i=>!Number.isInteger(i)||i<0||i>=values.length)||values[answer[0]]!==0)return null;
+  return {code:'number.digitorder.leading-zero',message:'さいしょに0を置くと、けたの数が少なくなるよ。さいしょは0いがいのカードにしよう。',phase:status.submitted?'invalid':'editing',targets:[{type:'card',index:answer[0]}]};
+ }
+ if(p.id!=='count')return null;
+ const scene=d.scene;
  const positions:number[]|null=scene?.type==='grid'&&Array.isArray(scene.values)?scene.values.flatMap((v:any,i:number)=>v==='●'?[i]:[]):Array.isArray(d.positions)?d.positions:null;
  if(!positions||positions.some(v=>!Number.isInteger(v)||v<0)||new Set(positions).size!==positions.length)return null;
  const count=positions.length,capacity=scene?.type==='grid'?scene.values.length:d.capacity;

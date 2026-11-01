@@ -59,3 +59,20 @@ test('separator violation marks its actual internal point without marking the un
 test('separator internal markers clear on reset and correct state without changing point geometry',()=>{
  const p=generateStage('separator',1,0),props={p,playbackAnswer:[0,1],answerFeedback:explainAnswer(p,[0,1],{accepted:false,submitted:true}),onAnswer:()=>{},onEdit:()=>{props.answerFeedback=null;}},h=hookHarness(ExtendedPuzzleView,props),before=JSON.stringify(p),tree=h.render();assert.match(html(tree),/data-feedback-target="cell:2"/);findElement(tree,n=>n.props?.className==='extended-actions').props.children[1].props.onClick();assert.doesNotMatch(html(h.render()),/data-feedback-target="cell:/);const good=html(React.createElement(PuzzleView,{p,playbackAnswer:p.solution,answerFeedback:explainAnswer(p,p.solution,{accepted:true,submitted:true}),onAnswer:()=>{}}));assert.doesNotMatch(good,/data-feedback-target="cell:/);assert.match(good,/内1/);assert.equal(JSON.stringify(p),before);
 });
+
+test('digitorder submit marks the zero card and editing clears it while partial guidance and auto success remain',()=>{
+ const original=generateStage('digitorder',1,0),p={...original,data:{...original.data,values:[6,0,7],target:760},solution:[2,0,1]},calls=[];
+ const props={p,answerFeedback:null,onAnswer:a=>{calls.push(a);props.answerFeedback=explainAnswer(p,a,{accepted:check(p,a),submitted:true});},onEdit:()=>{props.answerFeedback=null;}},h=hookHarness(ExtendedPuzzleView,props);
+ const cards=()=>findElement(h.render(),n=>n.props?.className==='number-cards').props.children;
+ const done=()=>findElement(h.render(),n=>n.props?.className==='done-action').props.onClick();
+ cards()[1].props.onClick();done();assert.equal(calls.length,0);assert.match(html(h.render()),/あと 2まい/);
+ cards()[0].props.onClick();cards()[2].props.onClick();assert.equal(calls.length,0);done();
+ assert.deepEqual(calls,[[1,0,2]]);assert.equal(props.answerFeedback?.code,'number.digitorder.leading-zero');
+ const marked=elements(h.render()).filter(n=>n.props?.['data-feedback-target']);
+ assert.equal(marked.length,1);assert.equal(marked[0].props.children,0);assert.equal(marked[0].props['data-feedback-target'],'card:1');assert.equal(marked[0].props['aria-describedby'],'answer-feedback');
+ assert.match(html(React.createElement(FeedbackNotice,{feedback:props.answerFeedback})),/さいしょ.*0/);
+ cards()[1].props.onClick();assert.equal(props.answerFeedback,null);assert.doesNotMatch(html(h.render()),/data-feedback-target=/);
+ findElement(h.render(),n=>n.props?.className==='extended-actions').props.children[0].props.onClick();done();assert.ok(props.answerFeedback);
+ findElement(h.render(),n=>n.props?.className==='extended-actions').props.children[1].props.onClick();assert.equal(props.answerFeedback,null);assert.doesNotMatch(html(h.render()),/data-feedback-target=/);
+ for(const index of [2,0,1])cards()[index].props.onClick();assert.equal(calls.length,3);assert.deepEqual(calls.at(-1),[2,0,1]);assert.equal(check(p,calls.at(-1)),true);assert.equal(props.answerFeedback,null);
+});
