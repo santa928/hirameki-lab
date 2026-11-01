@@ -135,3 +135,70 @@ test('equalparts seed 14 diagnoses an already oversized garden during editing be
  assert.equal(explain(p,[0,0,0,-1,1,-1],{accepted:false,submitted:false}).phase,'incomplete');
  assert.equal(explain(p,[0,0,0,1,1,1],{accepted:false,submitted:false}),null,'oversize warning clears after repaint');
 });
+
+test('insideは長方形にもへこみのある囲いにも実際の外側の点を示し、へこみを断定しない',()=>{
+ const shapes=[
+  {poly:[[0,0],[2,0],[2,2],[0,2]],points:[[1,1],[3,1]]},
+  {poly:[[0,0],[4,0],[4,1],[1,1],[1,4],[0,4]],points:[[.5,.5],[2,2]]},
+ ];
+ for(const data of shapes){
+  const p=freeze({...puzzle('inside',{extended:true,...data},[],'point-select'),solution:[0]}),answer=freeze([1]);
+  assert.equal(check(p,answer),false);assert.equal(check(p,[0]),true);
+  for(const submitted of [false,true]){
+   const f=explain(p,answer,{accepted:false,submitted});
+   assert.equal(f.code,'plane.inside.outside');assert.equal(f.phase,submitted?'invalid':'editing');
+   assert.match(f.message,/2番.*外側/);assert.doesNotMatch(f.message,/へこみ/);
+   assert.deepEqual(f.targets,[{type:'cell',index:1}]);
+  }
+ }
+});
+
+test('separatorは全点同側と同種splitでも実際の異種同側pairを説明・強調する',()=>{
+ const samples=[
+  {points:[[1,1],[2,2],[3,1],[3,2]],groups:[0,0,1,1],sides:[1,1,1,1]},
+  {points:[[1,1],[2,-1],[3,1],[3,-1]],groups:[0,0,1,1],sides:[1,-1,1,-1]},
+ ];
+ for(const {sides,...data} of samples)for(const answer of [[0,1],[1,0]]){
+  const p=freeze(puzzle('separator',{extended:true,anchors:[[0,0],[4,0]],...data},[],'separator'));
+  assert.equal(check(p,answer),false);
+  const f=explain(p,answer),marked=f.targets.filter(t=>t.type==='cell').map(t=>t.index);
+  assert.equal(f.code,'plane.separator.mixed');assert.equal(marked.length,2);
+  const [i,j]=marked;assert.notEqual(i,j);assert.ok(i>=0&&j>=0&&i<data.points.length&&j<data.points.length);
+  assert.notEqual(data.groups[i],data.groups[j]);assert.equal(sides[i],sides[j]);
+  assert.match(f.message,new RegExp(`${i+1}番と${j+1}番.*違う種類.*同じ側`));
+  assert.ok(f.targets.some(t=>t.type==='constraint'&&t.index===0));
+ }
+});
+
+test('separatorのfallbackは同種の別側という事実を述べ、存在しない異種pairを作らない',()=>{
+ const p=freeze(puzzle('separator',{extended:true,anchors:[[0,0],[4,0]],points:[[1,1],[2,-1]],groups:[0,0]},[],'separator'));
+ assert.equal(check(p,[0,1]),false);const f=explain(p,[0,1]);
+ assert.equal(f.code,'plane.separator.mixed');assert.match(f.message,/1番と2番.*同じ種類.*別々の側/);assert.doesNotMatch(f.message,/違う種類/);
+ assert.deepEqual(f.targets.filter(t=>t.type==='cell'),[{type:'cell',index:0},{type:'cell',index:1}]);
+});
+
+test('separatorは線上の点を先に説明し、正しく分かれた配置に偽の理由を出さない',()=>{
+ const anchors=[[0,0],[4,0]],line=freeze(puzzle('separator',{extended:true,anchors,points:[[1,0],[2,1]],groups:[0,1]},[],'separator'));
+ assert.equal(check(line,[0,1]),false);const f=explain(line,[0,1]);assert.equal(f.code,'plane.separator.line');assert.match(f.message,/1番.*線の上/);
+ assert.deepEqual(f.targets.filter(t=>t.type==='cell'),[{type:'cell',index:0}]);
+ const separated=freeze(puzzle('separator',{extended:true,anchors,points:[[1,1],[2,-1],[3,1],[3,-1]],groups:[0,1,0,1]},[],'separator'));
+ for(const answer of [[0,1],[1,0]]){assert.equal(check(separated,answer),true);assert.equal(explain(separated,answer),null);}
+});
+
+test('coinparkingの重なり理由は計算floatを埋め込まず、近接・接触の境界判定を保つ',()=>{
+ const samples=[
+  {radius:1.05,points:[[2.3,2.1],[3.7,2.7]],formula:/\(2×1\.05\)²/},
+  {radius:1,points:[[2,2],[3.9999999999999996,2]],formula:/\(2×1\)²/},
+ ];
+ for(const {formula,...data} of samples){
+  const p=freeze(puzzle('coinparking',{extended:true,n:8,k:2,...data},[],'parking')),answer=freeze([0,1]);
+  assert.equal(check(p,answer),false);const f=explain(p,answer);
+  assert.equal(f.code,'plane.coinparking.overlap');assert.match(f.message,/1番と2番.*重なる/);assert.match(f.message,/距離².*小さい/);assert.match(f.message,formula);assert.match(f.message,/触れるだけ.*大丈夫/);
+  assert.doesNotMatch(f.message,/\d+\.\d{8}|距離²\s*\d|²\s*=/);
+  assert.deepEqual(f.targets,[{type:'cell',index:0},{type:'cell',index:1}]);
+ }
+ for(const x of [4,4.1]){
+  const p=freeze(puzzle('coinparking',{extended:true,n:8,radius:1,k:2,points:[[2,2],[x,2]]},[],'parking'));
+  assert.equal(check(p,[0,1]),true);assert.equal(explain(p,[0,1]),null);
+ }
+});
