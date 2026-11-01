@@ -18,6 +18,8 @@ function symbolAlternatives(answer:any,attrs:string[],shuffle:<T>(a:T[])=>T[]){
 const annotated=(p:Puzzle,features:Features,score:number,concept:string):Puzzle=>{
  const text:Record<string,[string,string]>={order:['すべての やくそくどおりに ならべよう','位置・前後・間の枚数など、表示された全ての約束を満たす順番にカードを並べます。'],matrix:['よこの きまりで くうらんを みつけよう','例の行と同じ計算の関係を使い、空欄の数を求めます。'],odd:['きまりに あわない 1まいは？','表示された条件を満たさないカードを一枚選びます。'],zebra:['すべての じょうけんで カードを くばろう','一人に一枚、同じ数字は一度だけです。表示された候補と、二人の数字の関係を両方満たします。']};
  let scene=p.data.scene,prompt=text[p.id]?.[0],help=text[p.id]?.[1];
+ // 2×2の加算問題は例が1行だけなので、計算の種類を先に示す。
+ if(p.id==='matrix'&&p.data.n===2&&p.data.ruleFamily==='additive-cross'){prompt='どの ぎょうも おなじ かずを たそう';help='各行で、左の数に同じ数を足して右の数にします。上の行から足す数を見つけて、空欄の数を求めます。';}
  if(p.id==='familytree'){prompt=scene.queryText;help='線は親子のつながりで、上の人が親です。問題の人物や関係を確かめ、線をたどって考えます。';scene={...scene,hideQuery:true};}
  if(p.id==='rulemachine'||p.id==='cipher'){prompt=scene.prompt;help=p.id==='rulemachine'?'例から箱の変化を読み取ります。逆向きの問題は変化を戻し、二つの箱は指定の順番で使います。':'表の矢印を指定の向きと順番でたどります。逆向きなら最後の表から元へ戻します。';scene={...scene,prompt:undefined};}
  return{...p,data:{...p.data,scene,...(prompt?{prompt}:{}),...(help?{help}:{}),logicCurriculum:true,curriculumMetrics:{...features,score,concept}}};
