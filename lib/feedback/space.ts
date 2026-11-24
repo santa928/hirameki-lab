@@ -1,7 +1,7 @@
 import type {Puzzle} from '../engine/shared.ts';
 import type {Feedback,FeedbackTarget} from '../feedback.ts';
 import {equal,normalize,key} from '../engine/shared.ts';
-import {contacts,cubeSignature,cubeRotations,surfaceStep,applyHingeTurn,tiltTrace,dropPlacement} from '../engine/space.ts';
+import {fitsOpening,contacts,cubeSignature,cubeRotations,surfaceStep,applyHingeTurn,tiltTrace,dropPlacement} from '../engine/space.ts';
 import {project,foldNet,cutCube} from '../puzzles.ts';
 import {rollTrace} from '../teaching/roll.ts';
 
@@ -76,8 +76,13 @@ export function explainSpaceAnswer(p:Puzzle,answer:any,status:SpaceAnswerStatus)
   const candidate=cells(value);if(!candidate||!Array.isArray(d.views))return null;
   const actual=views(candidate);
   for(let axis=0;axis<d.views.length;axis++){
-   const expected=normalize(d.views[axis]),diff=p.id==='tunnelpass'?actual[axis].find(v=>!expected.some(w=>equal(v,w))):mismatch(expected,actual[axis])?.point;
-   if(diff)return reason('projection',p.id==='tunnelpass'?`${['前','右'][axis]}の穴には、横${diff[0]+1}・高さ${diff[1]+1}の出っ張りが通らないよ。もう一方の穴に通っても、両方を確かめよう。`:`${['前','右','上'][axis]}から見た図が合わないよ。横${diff[0]+1}・${axis===2?'奥':'高さ'}${diff[1]+1}の重なる列を確かめよう。`,axis);
+   const expected=normalize(d.views[axis]);
+   if(p.id==='tunnelpass'){
+    if(!fitsOpening(actual[axis],expected))return reason('projection',`${['前','右'][axis]}から見た形を穴に重ねよう。この向きでは、位置をずらしても穴からはみ出すよ。`,axis);
+    continue;
+   }
+   const diff=mismatch(expected,actual[axis])?.point;
+   if(diff)return reason('projection',`${['前','右','上'][axis]}から見た図が合わないよ。横${diff[0]+1}・${axis===2?'奥':'高さ'}${diff[1]+1}の重なる列を確かめよう。`,axis);
   }return null;
  }
  if(p.id==='pack3d'){

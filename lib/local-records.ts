@@ -5,9 +5,16 @@ import { japanDay } from './curriculum.ts';
 // Parse the session separately because its strict schema intentionally excludes the timestamp.
 const storedSchema = z.object({ session: sessionSchema, createdAt: z.number().int().min(0).max(8640000000000000) }).strict();
 export type StoredSession = { session: SessionResult; createdAt: number };
+export type CompletedSession = SessionResult & { createdAt: number };
+type SessionToSave = SessionResult & { createdAt?: number };
+
+function storedRecord({ createdAt = Date.now(), ...session }: SessionToSave): StoredSession {
+  return { session, createdAt };
+}
+
 const backupSchema = z.object({ format: z.literal('hirameki-lab'), version: z.literal(1), exportedAt: z.string().datetime(), sessions: z.array(storedSchema).max(100000) }).strict();
 export interface RecordStore {
-  save(session: SessionResult): Promise<void>;
+  save(session: SessionToSave): Promise<void>;
   list(): Promise<StoredSession[]>;
   merge(records: StoredSession[]): Promise<number>;
   progress(profile: number): Promise<Progress>;
@@ -87,16 +94,16 @@ export function localRecords(): RecordStore {
       tx.onabort = tx.onerror = () => { db.close(); reject(tx.error || request.error); };
     });
   };
-  return { save: async session => { await merge([{ session: sessionSchema.parse(session), createdAt: Date.now() }]); }, list, merge, progress: async profile => aggregateProgress(await list(), profile) };
+  return { save: async session => { await merge([storedRecord(session)]); }, list, merge, progress: async profile => aggregateProgress(await list(), profile) };
 }
 
 /** Build a portable backup of all profiles without modifying existing storage. */
-export async function exportBackup(store: RecordStore, pending: SessionResult[] = []): Promise<{ text: string; partial: boolean }> {
+export async function exportBackup(store: RecordStore, pending: SessionToSave[] = []): Promise<{ text: string; partial: boolean }> {
   let stored: StoredSession[], partial = false;
   try { stored = await store.list(); }
   catch (error) { if (!pending.length) throw error; stored = []; partial = true; }
   const unique = new Map(stored.map(r => [r.session.id, r]));
-  for (const s of pending) if (!unique.has(s.id)) unique.set(s.id, { session: sessionSchema.parse(s), createdAt: Date.now() });
+  for (const s of pending) if (!unique.has(s.id)) unique.set(s.id, storedSchema.parse(storedRecord(s)));
   const text = JSON.stringify({ format: 'hirameki-lab', version: 1, exportedAt: new Date().toISOString(), sessions: [...unique.values()] });
   if (new Blob([text]).size > 32 * 1024 * 1024 || unique.size > 100000) throw Error('バックアップが上限32MBを超えています。');
   return { text, partial };

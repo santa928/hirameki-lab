@@ -36,8 +36,13 @@ function planeShape(c:ReturnType<typeof context>,phase:number,level:number){
  return rotate(cells,pick([0,1,2,3]));
 }
 const planeLineDistance=(p:number[],a:number[],b:number[])=>Math.abs(cross(a,b,p))/Math.hypot(b[0]-a[0],b[1]-a[1]);
+// Parking centers and diameters are laid out in tenths of a board unit.
+export function parkingCirclesOverlap(a:number[],b:number[],radius:number){
+ const dx=a[0]*10-b[0]*10,dy=a[1]*10-b[1]*10,diameter=radius*20;
+ return dx*dx+dy*dy<diameter*diameter;
+}
 function planeParkingGraph(points:number[][],radius:number,k:number){
- const masks=points.map((p,i)=>points.reduce((m,q,j)=>i!==j&&(p[0]-q[0])**2+(p[1]-q[1])**2<4*radius**2?m|(1<<j):m,0));let maximum=0,count=0;const valid=new Uint8Array(1<<points.length),sizes=new Uint8Array(valid.length);valid[0]=1;for(let mask=1;mask<valid.length;mask++){const bit=mask&-mask,i=31-Math.clz32(bit),rest=mask^bit;if(valid[rest]&&!(masks[i]&rest)){valid[mask]=1;sizes[mask]=sizes[rest]+1;maximum=Math.max(maximum,sizes[mask]);if(sizes[mask]===k)count++;}}return{maximum,count,masks};
+ const masks=points.map((p,i)=>points.reduce((m,q,j)=>i!==j&&parkingCirclesOverlap(p,q,radius)?m|(1<<j):m,0));let maximum=0,count=0;const valid=new Uint8Array(1<<points.length),sizes=new Uint8Array(valid.length);valid[0]=1;for(let mask=1;mask<valid.length;mask++){const bit=mask&-mask,i=31-Math.clz32(bit),rest=mask^bit;if(valid[rest]&&!(masks[i]&rest)){valid[mask]=1;sizes[mask]=sizes[rest]+1;maximum=Math.max(maximum,sizes[mask]);if(sizes[mask]===k)count++;}}return{maximum,count,masks};
 }
 export function generatePlane(id:string,level:number,seed:number):Puzzle|undefined{
  if(!PLANE_META.some(m=>m[0]===id))return;const c=context(id,level,seed),{L,int,pick,shuffle,base,choice,numeric,shape}=c,phase=Math.floor((L-1)/4),step=(L-1)%4;
@@ -135,6 +140,6 @@ export function checkPlane(p:Puzzle,a:any):boolean{
  if(p.kind==='jigsaw'){if(!a||!Array.isArray(a.slots)||!Array.isArray(a.turns)||a.slots.length!==d.n*d.n||a.turns.length!==d.tiles.length||new Set(a.slots).size!==d.tiles.length||a.slots.some((v:any)=>!Number.isInteger(v)||!d.tiles[v])||a.turns.some((v:any)=>!Number.isInteger(v)||v<0||v>3))return false;const tiles=a.slots.map((i:number)=>tileEdges(d.tiles[i],a.turns[i]));return tiles.every((e:number[],i:number)=>(i<d.n?e[0]===0:e[0]+tiles[i-d.n][2]===0)&&(i%d.n===d.n-1?e[1]===0:e[1]+tiles[i+1][3]===0)&&(i>=d.n*(d.n-1)?e[2]===0:true)&&(i%d.n===0?e[3]===0:true));}
  if(p.kind==='mirrors')return Array.isArray(a)&&a.length===d.mirrors.length&&a.every(v=>v===0||v===1)&&equal(beamTrace(d.n,d.mirrors,a,d.row).exit,d.target);
  if(p.kind==='separator'){if(!Array.isArray(a)||a.length!==2||a[0]===a[1]||a.some(v=>!Number.isInteger(v)||!d.anchors[v]))return false;const signs=d.points.map((v:number[])=>Math.sign(cross(d.anchors[a[0]],d.anchors[a[1]],v)));return signs.every((v:number,i:number)=>v!==0&&v===(d.groups[i]===d.groups[0]?signs[0]:-signs[0]));}
- if(p.kind==='parking'){if(!Array.isArray(a)||a.length!==d.k||new Set(a).size!==a.length||a.some(v=>!Number.isInteger(v)||!d.points[v]))return false;return a.every((v,i)=>{const[x,y]=d.points[v];return x>=d.radius&&y>=d.radius&&x<=d.n-d.radius&&y<=d.n-d.radius&&a.slice(0,i).every(w=>{const[xx,yy]=d.points[w];return(x-xx)**2+(y-yy)**2>=4*d.radius**2;});});}
+ if(p.kind==='parking'){if(!Array.isArray(a)||a.length!==d.k||new Set(a).size!==a.length||a.some(v=>!Number.isInteger(v)||!d.points[v]))return false;return a.every((v,i)=>{const[x,y]=d.points[v];return x>=d.radius&&y>=d.radius&&x<=d.n-d.radius&&y<=d.n-d.radius&&a.slice(0,i).every(w=>!parkingCirclesOverlap(d.points[v],d.points[w],d.radius));});}
  return false;
 }
