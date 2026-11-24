@@ -35,8 +35,11 @@ test('fixed cells have content plus readonly names and mutable cells remain avai
  for(const [id,stage] of [['minestars',38],['tents',80],['binary',1],['nonogram',1],['islands',1]]){const p=generateStage(id,stage,0),markup=renderState(p,p.data.initial);assert.ok(p.data.given.some(v=>v>=0),id+' fixed sample');assert.ok(p.data.given.some(v=>v<0),id+' editable sample');p.data.given.forEach((v,i)=>{if(v<0)return;const label=Math.floor(i/p.data.n)+1+'ぎょう '+(i%p.data.n+1)+'れつ';const button=[...markup.matchAll(/<button[^>]*class="board-cell[^>]*>[\s\S]*?<\/button>/g)].map(m=>m[0]).find(t=>t.includes(label));assert.ok(button,id+'/'+i);assert.match(button,/aria-disabled="true"/);assert.match(button,/変更できない|きまっている/);assert.match(button,id==='minestars'?(v===0?new RegExp(String(p.data.counts[i])):/星/):id==='tents'?/木/:id==='binary'?/まる/:id==='islands'?(p.data.clues[i]?new RegExp(String(p.data.clues[i])):/海|空白/):/空白|まる/);});assert.match(markup,/board-cell/);}
 });
 test('TouchBoard fixed cell guard covers click, keyboard and drag while allowing editable cells',()=>{
- const calls=[],h=harness(TouchBoard,{n:2,values:['固定','入力','',''],readOnly:[true,false,false,false],cellLabels:['固定値','空き','',''],drag:true,onCell:i=>calls.push(i)}),tree=h.render(),buttons=all(tree).filter(n=>n.type==='button');buttons[0].props.onClick();assert.deepEqual(calls,[]);let prevented=false;buttons[0].props.onKeyDown({key:'Enter',preventDefault(){prevented=true;}});assert.equal(prevented,true);prevented=false;buttons[0].props.onKeyDown({key:' ',preventDefault(){prevented=true;}});assert.equal(prevented,true);assert.deepEqual(calls,[]);
- const ref=tree.props.ref;ref.current={getBoundingClientRect:()=>({left:0,top:0,width:200,height:200})};const event={clientX:50,clientY:50,pointerId:1,currentTarget:{setPointerCapture(){}}};tree.props.onPointerDown(event);assert.deepEqual(calls,[]);tree.props.onPointerMove({...event,clientX:150});assert.deepEqual(calls,[1]);tree.props.onPointerUp();buttons[1].props.onClick();assert.deepEqual(calls,[1]);
+ const calls=[],h=harness(TouchBoard,{n:2,values:['固定','入力','',''],readOnly:[true,false,false,false],cellLabels:['固定値','空き','',''],drag:true,onCell:i=>calls.push(i)}),tree=h.render(),buttons=all(tree).filter(n=>n.type==='button');buttons[0].props.onClick({detail:1});assert.deepEqual(calls,[]);let prevented=false;buttons[0].props.onKeyDown({key:'Enter',preventDefault(){prevented=true;}});assert.equal(prevented,true);prevented=false;buttons[0].props.onKeyDown({key:' ',preventDefault(){prevented=true;}});assert.equal(prevented,true);assert.deepEqual(calls,[]);
+ const ref=tree.props.ref;ref.current={getBoundingClientRect:()=>({left:0,top:0,width:200,height:200})};const event={clientX:50,clientY:50,pointerId:1,currentTarget:{setPointerCapture(){}}};tree.props.onPointerDown(event);assert.deepEqual(calls,[]);tree.props.onPointerMove({...event,clientX:150});assert.deepEqual(calls,[1]);tree.props.onPointerUp();buttons[1].props.onClick({detail:1});assert.deepEqual(calls,[1]);
+ // Keyboard and assistive activation send click with detail 0, including on the last touched cell.
+ buttons[1].props.onClick({detail:0});assert.deepEqual(calls,[1,1]);
+ buttons[0].props.onClick({detail:0});assert.deepEqual(calls,[1,1]);
 });
 
 test('unfinished violations stay editing or incomplete and never announce a failed completed answer',()=>{
@@ -290,4 +293,25 @@ test('しきつめの配置済み表示と選択は別々に保ち、locked・pr
   assert.deepEqual(pieces().map(n=>n.props['aria-pressed']),[false,true]);
   assert.deepEqual(pieces().map(n=>n.props.className==='selected'),[false,true]);
  }
+});
+
+
+test('駐車場のキーボード・図のクリック・番号ボタンは同じ上限で選択と解除を行う',()=>{
+ const p=generateStage('coinparking',1,0);
+ const h=harness(ExtendedPuzzleView,{p,onAnswer:()=>{}});
+ const point=i=>find(h.render(),n=>n.type==='g'&&n.props['aria-label']===(i+1)+'ばんの てん');
+ const buttons=()=>find(h.render(),n=>n.props?.className==='point-buttons').props.children;
+ const selected=()=>buttons().flatMap((n,i)=>n.props.className==='selected'?[i]:[]);
+ const press=(i,key)=>{let prevented=false;point(i).props.onKeyDown({key,preventDefault(){prevented=true;}});return prevented;};
+ point(0).props.onClick();
+ for(let i=1;i<p.data.k;i++)buttons()[i].props.onClick();
+ const full=Array.from({length:p.data.k},(_,i)=>i);
+ const prevented=press(p.data.k,' ');
+ assert.deepEqual(selected(),full);
+ assert.ok(prevented);
+ assert.ok(press(0,'Enter'));
+ assert.ok(press(p.data.k,' '));
+ point(0).props.onClick();
+ buttons()[0].props.onClick();
+ assert.deepEqual(selected(),[...full.slice(1),p.data.k]);
 });

@@ -1,7 +1,7 @@
 /** Answer diagnostics derived from the current planar geometry, never a new judge. */
 import type {Feedback,FeedbackTarget} from '../feedback.ts';
 import {equal,normalize,rotate,perimeter,connected,type Puzzle} from '../engine/shared.ts';
-import {cross,pointInside,hullIndices,tileEdges} from '../engine/plane.ts';
+import {cross,pointInside,hullIndices,tileEdges,parkingCirclesOverlap} from '../engine/plane.ts';
 export const PLANE_FEEDBACK_IDS=['rotate','mirror','fit','scale','translate','area','perimeter','square','angles','circlecenter','triangulate','inside','jigsaw','separator','hull','parallel','coinparking','equalparts','mapcolor'] as const;
 type Options={accepted:boolean;submitted?:boolean};
 const cellsKey=(cells:number[][])=>JSON.stringify(normalize(cells));
@@ -136,7 +136,7 @@ export function explainPlaneAnswer(p:Puzzle,answer:any,options:Options):Feedback
  }
  if(id==='coinparking'){
   for(const i of a){const [x,y]=d.points[i];if(x<d.radius||y<d.radius||x>d.n-d.radius||y>d.n-d.radius)return feedback('boundary',`${i+1}番の円は箱から出るよ。中心から壁まで、半径 ${d.radius}以上あけよう。`,[target('cell',i)]);}
-  for(let i=0;i<a.length;i++)for(let j=i+1;j<a.length;j++){const ds=distance2(d.points[a[i]],d.points[a[j]]),limit=4*d.radius**2;if(ds<limit)return feedback('overlap',`${a[i]+1}番と${a[j]+1}番の円が重なるよ。中心間の距離²は、(2×${d.radius})²より小さい。等しければ触れるだけで大丈夫。`,[target('cell',a[i]),target('cell',a[j])]);}
+  for(let i=0;i<a.length;i++)for(let j=i+1;j<a.length;j++){if(parkingCirclesOverlap(d.points[a[i]],d.points[a[j]],d.radius))return feedback('overlap',`${a[i]+1}番と${a[j]+1}番の円が重なるよ。中心間の距離²は、(2×${d.radius})²より小さい。等しければ触れるだけで大丈夫。`,[target('cell',a[i]),target('cell',a[j])]);}
   if(a.length===d.k)return null;
   return a.length<d.k?incomplete(`重ならない円を ${d.k}こ置こう。今は ${a.length}こ。`):feedback('count',`置く円は ${d.k}こ。今は ${a.length}こ選んでいるよ。`);
  }

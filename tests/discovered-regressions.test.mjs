@@ -18,8 +18,8 @@ test('surfacewalk L5 seed0: physical turns and the selected face agree',()=>{
  for(const f of S.FRAMES)assert.deepEqual(cross(f.u,f.v).map(v=>v||0),neg(f.n).map(v=>v||0));
  const p=S.generateSpace('surfacewalk',5,0),face=physicalFace(p),index=p.options.indexOf(face);assert.ok(index>=0);assert.equal(S.checkSpace(p,index),true);assert.equal(p.options.filter(v=>v===face).length,1);
 });
-test('tunnelpass L1 seed5: exactly one option fits both openings',()=>{
- const p=S.generateSpace('tunnelpass',1,5),indices=p.options.flatMap((v,i)=>fits(v.cells,p.data.views)?[i]:[]);assert.equal(indices.length,1);assert.equal(S.checkSpace(p,indices[0]),true);
+test('tunnelpass: exactly one orientation can slide through both openings, including with slack',()=>{
+ for(const [level,seed] of [[1,5],[15,4079453917]]){const p=S.generateSpace('tunnelpass',level,seed),indices=p.options.flatMap((v,i)=>fits(v.cells,p.data.views)?[i]:[]);assert.deepEqual(indices,[p.solution]);assert.equal(S.checkSpace(p,indices[0]),true);}
 });
 test('twobots L8 seed19: start has a reachable, distinct target',()=>{
  const p=T.generateTrial('twobots',8,19),d=p.data;assert.notDeepEqual(d.initial.positions,d.target);assert.equal(T.checkTrial(p,[]),false);

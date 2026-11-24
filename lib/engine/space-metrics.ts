@@ -1,5 +1,5 @@
 import {equal,key,normalize,range,type Puzzle} from './shared.ts';
-import {canExtract,rotateAxis,surfaceStep,tilt} from './space.ts';
+import {fitsOpening,canExtract,rotateAxis,surfaceStep,tilt} from './space.ts';
 import {foldNet} from '../puzzles.ts';
 export const SPACE_GOALS:Record<string,[string,string,string,string,string]>={
  cubes:['はしらごとの たかさを あわせる','かくれた つみきを みつける','だんごとに わけて かぞえる','はこ ぜんぶから あなを ひく','はしらと だんを つかいわける'],
@@ -33,7 +33,7 @@ const has=(c:number[][],p:number[])=>c.some(v=>equal(v,p));
 const columns=(c:number[][])=>[...new Set(c.map(([x,y])=>key([x,y])))].map(v=>JSON.parse(v) as number[]);
 const cellStats=(c:number[][])=>{const dims=range(3).map(i=>Math.max(...c.map(v=>v[i]))-Math.min(...c.map(v=>v[i]))+1),cols=columns(c),heights=cols.map(([x,y])=>Math.max(...c.filter(v=>v[0]===x&&v[1]===y).map(v=>v[2]+1))),degrees=c.map(p=>c.filter(q=>sum(q.map((v,i)=>Math.abs(v-p[i])))===1).length);return{height:dims[2],width:dims[0],depth:dims[1],axes:dims.filter(v=>v>1).length,volume:c.length,footprint:cols.length,heights:unique(heights),branches:degrees.filter(v=>v>=3).length,dimsKey:[...dims].sort().join(','),degreesKey:degrees.sort().join(','),hidden:c.filter(([x,y,z])=>has(c,[x+1,y,z])&&has(c,[x,y+1,z])&&has(c,[x,y,z+1])).length};};
 const projection=(c:number[][],i:number)=>normalize([...new Map(c.map(v=>{const p=i===0?[v[0],v[2]]:i===1?[v[1],v[2]]:[v[0],v[1]];return[key(p),p]})).values()]);
-const requiredViews=(p:Puzzle,contains=false)=>{const views=p.data.views,pass=p.options!.map(o=>views.map((v:number[][],i:number)=>contains?projection(o.cells,i).every(c=>has(v,c)):equal(projection(o.cells,i),v)));for(let k=1;k<=views.length;k++)for(let mask=1;mask<1<<views.length;mask++)if(mask.toString(2).split('').filter(v=>v==='1').length===k&&pass.every((v:boolean[],i:number)=>i===p.solution||!v.every((yes,j)=>!(mask&(1<<j))||yes)))return k;return 0;};
+const requiredViews=(p:Puzzle,contains=false)=>{const views=p.data.views,pass=p.options!.map(o=>views.map((v:number[][],i:number)=>contains?fitsOpening(projection(o.cells,i),v):equal(projection(o.cells,i),v)));for(let k=1;k<=views.length;k++)for(let mask=1;mask<1<<views.length;mask++)if(mask.toString(2).split('').filter(v=>v==='1').length===k&&pass.every((v:boolean[],i:number)=>i===p.solution||!v.every((yes,j)=>!(mask&(1<<j))||yes)))return k;return 0;};
 export function spaceMetrics(p:Puzzle):{score:number;features:Record<string,number|string|boolean>}{
  const{id,data:d}=p,features:Record<string,number|string|boolean>={},o=p.options||[];let score=0;const set=(a:Record<string,number|string|boolean>,s:number)=>{Object.assign(features,a);score=s;};
  if(['cubes','shadow','top','rotate3d'].includes(id)){const s=cellStats(d.cubes);Object.assign(features,{height:s.height,volume:s.volume,footprint:s.footprint,distinctHeights:s.heights,hidden:s.hidden,branches:s.branches,axes:s.axes});

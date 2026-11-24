@@ -202,3 +202,9 @@ test('coinparkingの重なり理由は計算floatを埋め込まず、近接・�
   assert.equal(check(p,[0,1]),true);assert.equal(explain(p,[0,1]),null);
  }
 });
+
+test('parking accepts decimal centers exactly one diameter apart',()=>{
+ const p=puzzle('coinparking',{extended:true,n:10,k:3,radius:1.05,points:[[4.1,2.8],[6.4,5.7],[8.5,5.7]]},[],'parking');
+ assert.equal(check(p,[0,1,2]),true);
+ assert.equal(explain(p,[0,1,2]),null);
+});

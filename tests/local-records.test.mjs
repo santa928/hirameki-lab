@@ -24,7 +24,10 @@ test('backup rejects malformed, unknown, nonfinite and conflicting records befor
 test('concurrent saves and repeated imports are idempotent; conflicting imports roll back fully', async () => {
  globalThis.indexedDB = new IDBFactory();
  const store = localRecords(), otherTab = localRecords();
- await Promise.all([store.save(a), otherTab.save(a), store.save(b)]);
+ const completedAt = Date.parse('2026-11-24T14:59:59Z');
+ await Promise.all([store.save(a), otherTab.save(a), store.save({ ...b, createdAt: completedAt })]);
+ await store.save(b);
+ assert.deepEqual((await store.list()).find(row => row.session.id === b.id), { session: b, createdAt: completedAt });
  assert.equal((await store.progress(1)).plays, 2);
  const { text: backup, partial } = await exportBackup(store);
  assert.equal(partial, false);

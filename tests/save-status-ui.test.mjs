@@ -77,3 +77,38 @@ test('混在時の失敗解消後も未解決分を保護し、バックアッ�
  const settings=elements(h.render()).find(n=>n.props?.className==='backup-tools');assert.equal(button(settings,'バックアップを 読み込む').props.disabled,true);
  attempts[1].resolve();await settle();assert.equal(warning(h.render()),undefined);
 });
+
+test('日をまたいで救出・再試行してもゲーム終了時刻を保持する',async t=>{
+ const {h,finish,attempts}=setup(),a=session(7);
+ const completed=Date.parse('2026-11-24T14:59:59Z'), nextDay=completed+2000;
+ const now=t.mock.method(Date,'now',()=>completed);
+ finish(a);h.render();attempts[0].reject(Error('保存失敗'));await settle();
+ now.mock.mockImplementation(()=>nextDay);
+ let blob;
+ t.mock.method(URL,'createObjectURL',value=>{blob=value;return 'blob:pending-date';});
+ t.mock.method(URL,'revokeObjectURL',()=>{});
+ const oldDocument=globalThis.document;
+ globalThis.document={createElement:()=>({click(){}})};t.after(()=>{globalThis.document=oldDocument;});
+ button(warning(h.render()),'バックアップを 書き出す').props.onClick();await settle();
+ const [rescued]=JSON.parse(await blob.text()).sessions;
+ assert.equal(rescued.createdAt,completed);
+ assert.deepEqual(rescued.session,a);
+ const retry=button(warning(h.render()),'もういちど 保存').props.onClick();
+ assert.equal(attempts[1].record.createdAt,completed);attempts[1].resolve();await retry;
+});
+
+test('正解0問でもあそんだゲームに数え、スタンプは最初の正解まで付けない',async()=>{
+ const {h,finish,attempts}=setup(),a={...session(8),correct:0,firstCorrect:0};
+ currentStore.progress=async()=>recordsModule.aggregateProgress([{session:a,createdAt:1}],1);
+ finish(a);h.render();attempts[0].resolve();await settle();
+ button(h.render(),'ぜんぶ').props.onClick();
+ const gameName=loadSource(project+'/lib/catalog.ts').GAMES.find(game=>game.id===a.game).name;
+ const cubeCard=findElement(h.render(),n=>n.props?.className==='game-card'&&n.props['aria-label']===gameName);
+ assert.match(html(findElement(cubeCard,n=>n.type==='p')),/もういちど/);
+ const nav=findElement(h.render(),n=>n.props?.className==='bottom-nav');
+ findElement(nav,n=>n.type==='button'&&html(n).includes('きろく')).props.onClick();
+ const tree=h.render(),stats=findElement(tree,n=>n.props?.className==='record-stats');
+ const played=findElement(stats,n=>n.type==='div'&&n.props.children[2]?.props.children==='あそんだ ゲーム');
+ assert.equal(findElement(played,n=>n.type==='b').props.children[0],1);
+ assert.match(html(findElement(tree,n=>n.props?.className==='stamp-title')),/0\/120/);
+});

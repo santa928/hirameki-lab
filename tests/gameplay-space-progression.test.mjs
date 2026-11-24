@@ -6,7 +6,13 @@ import {spaceMetrics} from '../lib/engine/space-metrics.ts';
 import {loadSource,project,projectRequire} from './helpers/tsx-source.mjs';
 const React=projectRequire('react'),{renderToStaticMarkup}=projectRequire('react-dom/server');
 const key=JSON.stringify,eq=(a,b)=>key(a)===key(b),dot=(a,b)=>a.reduce((s,v,i)=>s+v*b[i],0),cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
-const projection=(cells,axis)=>new Set(cells.map(p=>key(axis===0?[p[0],p[2]]:[p[1],p[2]])));
+function fitsView(cells,axis,view){
+ const hole=new Set(view.map(key)),maxX=Math.max(...view.map(p=>p[0])),maxZ=Math.max(...view.map(p=>p[1]));
+ for(let x=0;x<=maxX;x++)for(let z=0;z<=maxZ;z++){
+  if(cells.every(p=>hole.has(key([p[axis]+x,p[2]+z]))))return true;
+ }
+ return false;
+}
 test('space progression enforces reasoning constraints in every actual stage question',()=>{
  for(const[id]of SPACE_META)for(let stage=1;stage<=80;stage++)for(let q=0;q<10;q++){
   const L=Math.floor((stage-1)/4)+1,phase=Math.floor((L-1)/4),p=generate(id,L,stageSeed(id,stage,q)),d=p.data,{features:f,score}=spaceMetrics(p),at=`${id}/${stage}/${q}`;
@@ -20,7 +26,7 @@ test('space progression enforces reasoning constraints in every actual stage que
   if(id==='contact3d'&&phase)assert.ok(f.verticalContacts>=1,at);
   if(id==='voxelcoords'){for(let axis=0;axis<3;axis++){const counts={};p.options.forEach(v=>{const value=v.split('・')[axis];counts[value]=(counts[value]||0)+1;});assert.ok(Object.values(counts).every(n=>n===2||n===4),at);}const expected=[...d.target];for(const move of d.moves)expected[move.axis]+=d.reverseTask?-move.amount:move.amount;assert.deepEqual(expected,d.result,at);assert.equal(p.options[p.solution],expected.map(v=>v+1).join('・'),at);}
   if(id==='surfacewalk')assert.ok(f.edgeCrossings>=1+Math.floor(phase/2),at);
-  if(id==='tunnelpass'&&phase){const pass=p.options.map(o=>d.views.map((view,axis)=>{const hole=new Set(view.map(key));return[...projection(o.cells,axis)].every(v=>hole.has(v));}));assert.equal(pass.filter(v=>v.every(Boolean)).length,1,at);assert.ok(pass.some((v,i)=>i!==p.solution&&v[0]&&!v[1]),at);assert.ok(pass.some((v,i)=>i!==p.solution&&!v[0]&&v[1]),at);}
+  if(id==='tunnelpass'&&phase){const pass=p.options.map(o=>d.views.map((view,axis)=>fitsView(o.cells,axis,view)));assert.equal(pass.filter(v=>v.every(Boolean)).length,1,at);assert.ok(pass.some((v,i)=>i!==p.solution&&v[0]&&!v[1]),at);assert.ok(pass.some((v,i)=>i!==p.solution&&!v[0]&&v[1]),at);}
   if(id==='hinge3d')assert.equal(f.returnsToStart,false,at);
   if(id==='handedness'&&d.exactReflection){const reflected=d.points.map(p=>p.map((v,i)=>i===d.reflectionAxis?-v:v));assert.ok(eq(p.options[p.solution].points,reflected),at);assert.equal(p.options.filter(o=>eq(o.points,reflected)).length,1,at);assert.equal(p.options.length,4,at);}
   if(id==='balancefoot'){const result=[...d.heights];if(d.move){result[d.move.from]--;result[d.move.to]++;}if(d.swap)[result[d.swap.from],result[d.swap.to]]=[result[d.swap.to],result[d.swap.from]];const center=a=>a.reduce((sum,v,i)=>sum+v*(i+.5),0)/a.reduce((sum,v)=>sum+v,0);assert.deepEqual(result,d.resultHeights,at);assert.equal(p.options[p.solution],Math.floor(center(result))+1,at);if(phase>=3)assert.notEqual(Math.floor(center(d.heights)),Math.floor(center(result)),at);}

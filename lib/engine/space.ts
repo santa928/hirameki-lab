@@ -31,6 +31,14 @@ export function cubeRotations(cells:number[][]){const out:number[][][]=[];for(le
 export function cubeSignature(cells:number[][]){return cubeRotations(cells).map(key).sort()[0];}
 export function polycube(c:ReturnType<typeof context>,count:number){const cells=[[0,0,0]];while(cells.length<count){const a=c.pick(cells),axis=c.int(0,2),b=[...a];b[axis]+=c.pick([-1,1]);if(!cells.some(v=>equal(v,b)))cells.push(b);}return normalize(cells);}
 const projections=(cells:number[][])=>[normalize([...new Map(cells.map(([x,,z])=>[key([x,z]),[x,z]])).values()]),normalize([...new Map(cells.map(([,y,z])=>[key([y,z]),[y,z]])).values()]),normalize([...new Map(cells.map(([x,y])=>[key([x,y]),[x,y]])).values()])];
+// Keep the orientation fixed and try each possible placement of the first projected cell.
+export function fitsOpening(projection:number[][],opening:number[][]){
+ if(!projection.length||projection.length>opening.length)return false;
+ const [firstX,firstY]=projection[0];
+ return opening.some(([x,y])=>projection.every(([px,py])=>
+  opening.some(([ox,oy])=>ox===px+x-firstX&&oy===py+y-firstY)
+ ));
+}
 export type TiltStop={from:number;to:number;path:number[];reason:'edge'|'wall'|'ball';blocker:number;settled:number[]};
 export function tiltTrace(balls:number[],n:number,walls:number[],dir:number){
  const delta=[-n,1,n,-1][dir],order=[...balls].sort((a,b)=>dir===0?a-b:dir===2?b-a:dir===1?b%n-a%n:a%n-b%n),settled:number[]=[],steps:TiltStop[]=[];
@@ -81,7 +89,7 @@ function generateSpaceLegacy(id:string,level:number,seed:number):Puzzle|undefine
  }
  if(id==='tunnelpass'){
   for(let attempt=0;attempt<200;attempt++){
-   const original=polycube(c,4+Math.floor(L/3)),poses=cubeRotations(original),answer=pick(poses),views=projections(answer).slice(0,2),wrong=shuffle(poses.filter(a=>projections(a).slice(0,2).some((projection,i)=>projection.some(cell=>!views[i].some(v=>equal(v,cell)))))).slice(0,3).map(cells=>sceneCubes(cells));
+   const original=polycube(c,4+Math.floor(L/3)),poses=cubeRotations(original),answer=pick(poses),views=projections(answer).slice(0,2),wrong=shuffle(poses.filter(a=>projections(a).slice(0,2).some((projection,i)=>!fitsOpening(projection,views[i])))).slice(0,3).map(cells=>sceneCubes(cells));
    if(wrong.length>=3)return choice(sceneCubes(answer),wrong,{type:'views',views,holes:true},'まえだけでなく、みぎの あなも たしかめよう。',{views});
   }throw Error('tunnel orientations');
  }
@@ -196,7 +204,7 @@ export function generateSpace(id:string,level:number,seed:number):Puzzle|undefin
  }
  if(id==='tunnelpass'){
   for(let tries=0;tries<1200;tries++){const original=polycube(c,4+Math.floor(L/4)),poses=cubeRotations(original),correct=pick(poses),stats=worldStats(correct);if(phase>=2&&stats.axes<3)continue;const views=projections(correct).slice(0,2);if(phase>=3){const i=pick([0,1]),v=views[i],extra=pick(v).map((n,k)=>n+(k===0?1:0));if(!hasCell(v,extra))v.push(extra);views[i]=normalize(v);}
-   const pass=(a:number[][])=>projections(a).slice(0,2).map((v,i)=>v.every(cell=>hasCell(views[i],cell))),groups=[[],[],[]] as number[][][][];
+   const pass=(a:number[][])=>projections(a).slice(0,2).map((v,i)=>fitsOpening(v,views[i])),groups=[[],[],[]] as number[][][][];
    for(const pose of poses){const[a,b]=pass(pose);if(a&&b)continue;groups[a?0:b?1:2].push(pose);}
    if(phase>0&&(!groups[0].length||!groups[1].length))continue;const wrong:number[][][]=[];if(groups[0].length)wrong.push(pick(groups[0]));if(groups[1].length)wrong.push(pick(groups[1]));for(const a of shuffle(groups.flat()))if(wrong.length<3&&!wrong.some(v=>equal(v,a)))wrong.push(a);if(wrong.length<3)continue;
    return stageInstruction(choice(sceneCubes(correct),wrong.map(sceneCubes),{type:'views',views,holes:true},'かたほうを とおっても、もう かたほうも たしかめよう。',{views}),'この むきのまま ふたつの あなを とおれるのは？',phase<1?'あなと でっぱりを くらべる':phase<3?'ふたつの あなが どちらも ひつよう':'あなの あまりと ひっかかる でっぱりを わける');
