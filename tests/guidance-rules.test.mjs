@@ -3,6 +3,7 @@ import {test} from 'node:test';
 import {GAMES} from '../lib/catalog.ts';
 import {generateStage,stageCount} from '../lib/stages.ts';
 import {generate,check} from '../lib/puzzles.ts';
+import {readWithBoardClues} from '../lib/question-reading.ts';
 const help=id=>GAMES.find(g=>g.id===id).help;
 
 test('概要は現在の条件・印・線と後半の追加規則を案内する',()=>{
@@ -57,4 +58,26 @@ test('matrixの3×3は加減乗算・複合・逆算でも既存の計算種を�
   assert.equal(p.data.help,'例の行と同じ計算の関係を使い、空欄の数を求めます。');
   assert.equal(check(p,p.solution),true);
  }
+});
+
+
+test('数字カードの読み上げには今回の大小・末尾条件を表示どおり含める',()=>{
+ for(const [level,goal] of [[1,'いちばん おおきく'],[9,'いちばん ちいさく'],[17,'偶数で いちばん おおきく'],[18,'奇数で いちばん ちいさく'],[19,'5で割り切れて いちばん おおきく'],[20,'5で割り切れて いちばん ちいさく']]){
+  const p=generate('digitorder',level,42);
+  assert.equal(p.data.scene.text,goal);
+  const intro=GAMES.find(g=>g.id===p.id).prompt;
+  assert.equal(readWithBoardClues(p,intro),[intro,goal,p.data.scene.sub,''].join('。'));
+ }
+});
+
+test('ならびの推理は問題ごとの全条件を表示順に読み、別の盤面は元の発話を保つ',()=>{
+ for(const level of [1,7,11,15,20]){
+  const p=generate('order',level,42);
+  const expected=p.data.scene.items.map(item=>item.text+'。').join('');
+  assert.ok(expected.length>0);
+  assert.equal(readWithBoardClues(p,p.data.prompt),p.data.prompt+'。'+expected);
+  assert.equal(readWithBoardClues(p,p.data.help),p.data.help+expected);
+ }
+ const matrix=generateStage('matrix',1,0);
+ assert.equal(readWithBoardClues(matrix,matrix.data.prompt),matrix.data.prompt);
 });

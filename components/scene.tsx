@@ -40,7 +40,25 @@ if(s.type==='symbol')return wrap(<SymbolCard s={s}/>);
 if(s.type==='grid'||s.type==='heightmap')return wrap(<><MiniGrid n={s.n} values={s.values} blocked={s.blocked}/>{s.type==='heightmap'&&<small>うえから みた たかさ</small>}{s.footer&&<small>{s.footer}</small>}</>);
 if(s.type==='cards')return wrap(<div className="scene-cards">{s.values.map((v:any,i:number)=><span key={i}>{v}</span>)}</div>);
 if(s.type==='abacus')return wrap(<div className="place-columns">{s.digits.map((v:number,i:number)=>{const unit=10**(s.digits.length-1-i);return <div key={i}><strong>{unit}</strong><div>{range(v).map(j=><span key={j} className={`bundle unit-${unit}`}><i/>{unit===1?'':unit}</span>)}</div></div>;})}</div>);
-if(s.type==='numberline')return wrap(<svg viewBox="0 0 340 110" aria-hidden="true"><path d="M25 65H315" stroke="#486071" strokeWidth="3"/>{range(s.steps+1).map(i=><path key={i} d={`M${25+290*i/s.steps} 56v18`} stroke="#486071" strokeWidth="2"/>)}<text x="25" y="96" textAnchor="middle" fontSize="19">{s.min}</text><text x="315" y="96" textAnchor="middle" fontSize="19">{s.max}</text><text x={25+290*s.at/s.steps} y="38" textAnchor="middle" fontSize="24" fontWeight="800" fill="#d28d15">{s.label}</text><path d={`M${25+290*s.at/s.steps} 43v13`} stroke="#d28d15" strokeWidth="3"/></svg>);
+if(s.type==='numberline'){
+ const x=(i:number)=>25+290*i/s.steps;
+ return wrap(<svg viewBox="0 0 340 110" aria-hidden="true">
+  <path d="M25 65H315" stroke="#486071" strokeWidth="3"/>
+  {range(s.steps+1).map(i=><path key={i} d={`M${x(i)} 56v18`} stroke="#486071" strokeWidth="2"/>)}
+  {range(s.countedIntervals??0).map(i=><g key={i}>
+   <rect x={x(i)+2} y="54" width={290/s.steps-4} height="10" rx="3" fill="#269e8d"/>
+   <text x={x(i+.5)} y="49" textAnchor="middle" fontSize="14">{i+1}こ</text>
+  </g>)}
+  <text x="25" y="96" textAnchor="middle" fontSize="19">{s.min}</text>
+  <text x="315" y="96" textAnchor="middle" fontSize="19">{s.max}</text>
+  <text x={x(s.at)} y="38" textAnchor="middle" fontSize="24" fontWeight="800" fill="#d28d15">{s.label}</text>
+  <path d={`M${x(s.at)} 43v13`} stroke="#d28d15" strokeWidth="3"/>
+  {s.fraction&&<g transform={`translate(${x(s.at)},0)`} textAnchor="middle" fontSize="15" fontWeight="700" fill="#344e60">
+   <text y="84">{s.fraction[0]}</text><path d="M-9 87h18" stroke="#344e60" strokeWidth="2"/>
+   <text y="104">{s.fraction[1]}</text>
+  </g>}
+ </svg>);
+}
 if(s.type==='share')return wrap(<><div className="dot-cloud">{range(s.total).map(i=><span key={i} className="snack-dot"/>)}</div><div className="share-people">{range(s.groups).map(i=><span key={i}>☺<small>{i+1}</small></span>)}</div></>);
 if(s.type==='clock'){const hand=(angle:number,len:number)=>[100+Math.sin(angle)*len,100-Math.cos(angle)*len];const h=hand((s.hour%12+s.minute/60)*Math.PI/6,43),m=hand(s.minute*Math.PI/30,68);return wrap(<svg viewBox="0 0 200 200" aria-label="とけい"><circle cx="100" cy="100" r="94" fill="#fff" stroke="#91cbd9" strokeWidth="8"/>{range(60).map(i=>{const p=hand(i*Math.PI/30,i%5?86:82),q=hand(i*Math.PI/30,90);return <path key={i} d={`M${p}L${q}`} stroke="#587181" strokeWidth={i%5?1:2}/>;})}{range(12).map(i=>{const p=hand((i+1)*Math.PI/6,71);return <text key={i} x={p[0]} y={p[1]+5} textAnchor="middle" fontSize="15" fill="#344e60">{i+1}</text>;})}<path d={`M100 100L${h}`} stroke="#35556b" strokeWidth="9" strokeLinecap="round"/><path d={`M100 100L${m}`} stroke="#edaf2f" strokeWidth="5" strokeLinecap="round"/><circle cx="100" cy="100" r="6" fill="#35556b"/></svg>);}
 if(s.type==='coins'||s.type==='expression')return wrap(<><small>おだい</small><strong className="scene-title">{s.target}{s.type==='coins'?'えん':''}</strong></>);
