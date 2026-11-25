@@ -62,6 +62,14 @@ function actionWords(p:Puzzle,a:any,before:any,after:any){
 /** Adapt mathematically checked traces to static, reversible teaching frames. */
 function specificTeaching(p:Puzzle):{scene:any;caption:string;phase:string}[]|null{
  const d=p.data;
+ if(p.id==='fractionline'&&p.level<=4){
+  const line=d.scene,{steps,at}=line;
+  return [
+   {scene:{...line,countedIntervals:steps},phase:'observe',caption:`0から1までを おなじ長さに 分けたよ。ぜんぶで ${steps}こ。これが 分数の 下の数（分母）だよ。`},
+   {scene:{...line,countedIntervals:at},phase:'calculate',caption:`0から★まで いくつぶん？ 色のついた ${at}こぶんが、分数の 上の数（分子）だよ。`},
+   {scene:{...line,countedIntervals:at,fraction:[at,steps]},phase:'calculate',caption:`${steps}こに 分けたうちの ${at}こぶん。分数で ${at}/${steps} と書いて「${steps}ぶんの${at}」と読むよ。`},
+  ];
+ }
  if(p.id==='foldpunch'){const t=foldTrace(d.n,d.folds,d.holes),frames:any[]=[];
   for(const step of t.foldSteps){frames.push({scene:{type:'paper-state',size:step.before,creases:[...step.creasesBefore,...step.crease],holes:[],fold:step},caption:`${step.order}かいめ。${step.axis==='x'?'みぎ半分を ひだりへ':'下半分を 上へ'}おる。破線が おる線`,phase:'transform'});frames.push({scene:{type:'paper-state',size:step.after,creases:step.creasesAfter,holes:[]},caption:`${step.order}かい おった紙。よこ${step.after.width}・たて${step.after.height}。まだ穴は ない`,phase:'transform'});}
   frames.push({scene:{type:'paper-state',size:t.folded,creases:t.folded.creases,holes:t.folded.holes},caption:'おった紙に あなを あける',phase:'observe'});

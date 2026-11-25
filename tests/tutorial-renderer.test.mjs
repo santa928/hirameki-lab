@@ -133,3 +133,23 @@ test('串S80の4層100マスと現在位置を保持して教程専用2×2で表
   assert.ok(css.includes('.teaching-skewer[data-layers="4"] .teaching-grid>span{aspect-ratio:auto;min-height:18px;height:18px;font-size:14px'));
  }finally{await server.close();}
 });
+
+test('分数のお手本は区間の間に色と個数を表示する',async()=>{
+ const server=await createServer({server:{middlewareMode:true,ws:false},appType:'custom'});
+ try{
+  const {TeachingScene}=await server.ssrLoadModule('/components/teaching-scene.tsx');
+  const {p,frames}=makeTutorial('fractionline');
+  for(const frame of frames){
+   const html=renderToStaticMarkup(React.createElement(TeachingScene,{scene:frame.scene}));
+   const labels=[...html.matchAll(/>(\d+)こ<\/text>/g)].map(m=>Number(m[1]));
+   assert.deepEqual(labels,Array.from({length:frame.scene.countedIntervals},(_,i)=>i+1));
+   if(frame.scene.fraction){
+    const [top,bottom]=frame.scene.fraction;
+    assert.ok(html.includes(`y="84">${top}</text>`));
+    assert.ok(html.includes(`y="104">${bottom}</text>`));
+   }
+  }
+  const board=renderToStaticMarkup(React.createElement(TeachingScene,{scene:p.data.scene}));
+  assert.doesNotMatch(board,/>\d+こ<\/text>/);
+ }finally{await server.close();}
+});
